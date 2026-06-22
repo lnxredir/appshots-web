@@ -1,10 +1,20 @@
 import sharp from 'sharp';
 import { getDevice } from '../devices.js';
-import { frameOptionsSchema, type FrameOptions, type DeviceSpec } from '../types.js';
+import { frameOptionsSchema, type FrameOptions, type DeviceSpec, type StickerPlacement, type CustomFont } from '../types.js';
+import {
+  buildFontFaces,
+  buildTextAttrs,
+  buildTextFilters,
+  formatTextContent,
+} from './text-styles.js';
+import { buildStickerLayers } from './stickers.js';
+import { compositeOntoCanvas } from './composite.js';
+import { buildDeviceLayers } from './device-frame.js';
+import { buildPanelTextSvg } from './panel-text.js';
 
 interface FrameInput {
-  /** Path to the raw screenshot */
-  input: string;
+  /** Path or buffer of the raw screenshot */
+  input: string | Buffer;
   /** Device slug (e.g., "iphone-6.9") */
   device: string;
   /** Frame styling options */
@@ -15,6 +25,14 @@ interface FrameInput {
   subtitle?: string;
   /** Orientation: portrait or landscape */
   orientation?: 'portrait' | 'landscape';
+  /** Decorative sticker overlays */
+  stickers?: StickerPlacement[];
+  /** User-uploaded font files */
+  customFonts?: CustomFont[];
+  /** When false, skip device frame rendering (for client-side live preview) */
+  includeDevice?: boolean;
+  /** When false, skip text overlay rendering (for client-side live preview) */
+  includeText?: boolean;
 }
 
 // ─── Device frame configuration ────────────────────────────
@@ -110,49 +128,20 @@ function getFrameConfig(spec: DeviceSpec): DeviceFrameConfig {
   };
 }
 
-// ─── Frame color presets ───────────────────────────────────
-
-interface FrameColor {
-  body: string;
-  ring: string;
-}
-
-const FRAME_COLORS: Record<string, FrameColor> = {
-  black: { body: '#1a1a1a', ring: '#333333' },
-  silver: { body: '#C8C8CD', ring: '#E0E0E5' },
-  gold: { body: '#A0824E', ring: '#C8A870' },
-  blue: { body: '#1A2F4F', ring: '#2C4A7C' },
-  red: { body: '#5C1010', ring: '#8B2020' },
-  white: { body: '#E8E8E8', ring: '#FFFFFF' },
-};
-
-function resolveFrameColor(frameColor: string): FrameColor {
-  if (FRAME_COLORS[frameColor]) return FRAME_COLORS[frameColor];
-  return { body: darken(frameColor, 20), ring: frameColor };
-}
-
-function darken(hex: string, pct: number): string {
-  const [r, g, b] = parseHex(hex);
-  return toHex(
-    Math.max(0, Math.round(r * (1 - pct / 100))),
-    Math.max(0, Math.round(g * (1 - pct / 100))),
-    Math.max(0, Math.round(b * (1 - pct / 100))),
-  );
-}
-
-function parseHex(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-
-function toHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-}
-
 // ─── Main export ───────────────────────────────────────────
 
 export async function frameScreenshot(params: FrameInput): Promise<Buffer> {
-  const { input, device, title, subtitle, orientation = 'portrait' } = params;
+  const {
+    input,
+    device,
+    title,
+    subtitle,
+    orientation = 'portrait',
+    stickers = [],
+    customFonts = [],
+    includeDevice = true,
+    includeText = true,
+  } = params;
   const opts = frameOptionsSchema.parse(params.options ?? {});
 
   const spec = getDevice(device);
@@ -162,8 +151,14 @@ export async function frameScreenshot(params: FrameInput): Promise<Buffer> {
   const canvasH = orientation === 'portrait' ? spec.height : spec.width;
 
   const hasOverlay = !!(title || subtitle);
+  const hasStickers = stickers.length > 0;
   const isPlainResize =
-    !hasOverlay && opts.background === '#000000' && !opts.shadow && !opts.deviceFrame && !opts.pattern;
+    !hasOverlay &&
+    !hasStickers &&
+    opts.background === '#000000' &&
+    !opts.shadow &&
+    !opts.deviceFrame &&
+    !opts.pattern;
 
   if (isPlainResize) {
     return sharp(input)
@@ -176,7 +171,10 @@ export async function frameScreenshot(params: FrameInput): Promise<Buffer> {
     opts.deviceFrame && (spec.category === 'phone' || spec.category === 'tablet');
 
   if (showFrame) {
-    return frameWithDevice(input, spec, opts, canvasW, canvasH, title, subtitle, hasOverlay, orientation);
+    return frameWithDevice(
+      input, spec, opts, canvasW, canvasH, title, subtitle, hasOverlay && includeText, orientation, stickers, customFonts,
+      includeDevice,
+    );
   }
 
   // Non-device-frame path — existing layout
@@ -192,14 +190,14 @@ export async function frameScreenshot(params: FrameInput): Promise<Buffer> {
 
   return frameWithoutDevice(
     input, opts, canvasW, canvasH, areaW, areaH, padX, topOffset, padY,
-    title, subtitle, titleH, subtitleH, titleFontSize, subtitleFontSize, hasOverlay,
+    title, subtitle, titleH, subtitleH, titleFontSize, subtitleFontSize, hasOverlay && includeText, stickers, customFonts,
   );
 }
 
 // ─── Frame WITH device bezel (LeanDine-style) ──────────────
 
 async function frameWithDevice(
-  input: string,
+  input: string | Buffer,
   spec: DeviceSpec,
   opts: FrameOptions,
   canvasW: number,
@@ -208,12 +206,13 @@ async function frameWithDevice(
   subtitle: string | undefined,
   hasOverlay: boolean,
   orientation: string,
+  stickers: StickerPlacement[],
+  customFonts: CustomFont[],
+  includeDevice = true,
 ): Promise<Buffer> {
   const fc = getFrameConfig(spec);
-  const { body: bodyColor, ring: ringColor } = resolveFrameColor(opts.frameColor);
-
-  // Phone dimensions — proportional to canvas width
-  const phoneW = Math.round(canvasW * fc.phoneScale);
+  const widthScale = opts.screenshotWidth ?? 1;
+  const phoneW = Math.round(canvasW * fc.phoneScale * widthScale);
   const bezel = Math.round(phoneW * fc.bezelWidth);
   const screenW = phoneW - bezel * 2;
   const nativeW = orientation === 'portrait' ? spec.width : spec.height;
@@ -221,270 +220,71 @@ async function frameWithDevice(
   const screenH = Math.round(screenW * (nativeH / nativeW));
   const phoneH = screenH + bezel * 2;
 
-  // Center horizontally
-  const phoneX = Math.round((canvasW - phoneW) / 2);
-
-  // Vertical position — phone extends beyond canvas edge
+  let phoneX: number;
   let phoneY: number;
-  if (opts.textPosition === 'top') {
-    // Phone from bottom: extends below canvas
+  if (opts.screenshotX !== undefined && opts.screenshotY !== undefined) {
+    phoneX = Math.round(canvasW * opts.screenshotX);
+    phoneY = Math.round(canvasH * opts.screenshotY);
+  } else if (opts.textPosition === 'top') {
+    phoneX = Math.round((canvasW - phoneW) / 2);
     phoneY = canvasH - phoneH + Math.round(phoneH * 0.056);
   } else {
-    // Phone from top (default): extends above canvas
+    phoneX = Math.round((canvasW - phoneW) / 2);
     phoneY = -Math.round(phoneH * 0.074);
   }
 
-  const bodyRadius = Math.round(phoneW * fc.bodyRadius);
-  const screenRadius = Math.round(phoneW * fc.screenRadius);
-  const ringWidth = Math.max(2, Math.round(phoneW * 0.008));
+  const rotation = Number(opts.screenshotRotation) || 0;
 
-  // Resize screenshot to screen area (crop from top, like object-position: top)
-  const resizedScreenshot = await sharp(input)
-    .resize(screenW, screenH, { fit: 'cover', position: 'top' })
-    .png()
-    .toBuffer();
-
-  // Mask screenshot with rounded rect for screen shape
-  const screenMask = Buffer.from(
-    `<svg width="${screenW}" height="${screenH}">
-      <rect width="${screenW}" height="${screenH}" rx="${screenRadius}" ry="${screenRadius}" fill="white"/>
-    </svg>`
-  );
-  const maskedScreen = await sharp(resizedScreenshot)
-    .ensureAlpha()
-    .composite([{ input: screenMask, blend: 'dest-in' }])
-    .png()
-    .toBuffer();
-
-  // Background
   const bgSvg = buildBackgroundSvg(canvasW, canvasH, opts.background);
-
-  // Pattern overlay
   const patternSvg = opts.pattern
     ? buildPatternSvg(canvasW, canvasH, opts.pattern, opts.patternColor, opts.patternOpacity)
     : null;
 
-  // Phone body SVG (body rect + metallic ring)
-  const phoneSvg = `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-    <rect x="${phoneX}" y="${phoneY}" width="${phoneW}" height="${phoneH}"
-      rx="${bodyRadius}" ry="${bodyRadius}"
-      fill="${bodyColor}" stroke="${ringColor}" stroke-width="${ringWidth}"/>
-  </svg>`;
-
-  // Notch + home bar overlay
-  const overlaysSvg = buildPhoneOverlaysSvg(
-    canvasW, canvasH, phoneX, phoneY, phoneW, phoneH, bezel, fc,
-  );
-
-  // Shadow buffer (canvas-sized, composited at 0,0)
-  let shadowBuf: Buffer | null = null;
-  if (opts.shadow) {
-    shadowBuf = await buildPhoneShadow(
-      canvasW, canvasH, phoneX, phoneY, phoneW, phoneH, bodyRadius,
-    );
-  }
-
-  // Text overlay
   const textSvg = hasOverlay
-    ? buildDeviceTextSvg(canvasW, canvasH, title, subtitle, opts)
+    ? await buildPanelTextSvg(canvasW, canvasH, title, subtitle, opts, customFonts)
     : null;
 
-  // Composite: bg → pattern → shadow → phone body → screen → overlays → text
   const layers: sharp.OverlayOptions[] = [];
 
   if (patternSvg) {
     layers.push({ input: Buffer.from(patternSvg), top: 0, left: 0 });
   }
 
-  if (shadowBuf) {
-    layers.push({ input: shadowBuf, top: 0, left: 0 });
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'background'));
+
+  if (includeDevice) {
+    const deviceLayers = await buildDeviceLayers({
+      input: input as Buffer,
+      spec,
+      opts,
+      panelW: canvasW,
+      canvasW,
+      canvasH,
+      phoneX,
+      phoneY,
+      widthScale,
+      orientation: orientation as 'portrait' | 'landscape',
+      rotation,
+    });
+    layers.push(...deviceLayers);
   }
 
-  layers.push({ input: Buffer.from(phoneSvg), top: 0, left: 0 });
-
-  layers.push({
-    input: maskedScreen,
-    top: phoneY + bezel,
-    left: phoneX + bezel,
-  });
-
-  layers.push({ input: Buffer.from(overlaysSvg), top: 0, left: 0 });
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'behind-text'));
 
   if (textSvg) {
     layers.push({ input: Buffer.from(textSvg), top: 0, left: 0 });
   }
 
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'foreground'));
+
   const bg = await sharp(Buffer.from(bgSvg)).png().toBuffer();
-  return sharp(bg).composite(layers).png({ quality: 100 }).toBuffer();
-}
-
-// ─── Phone overlays (notch, home bar) ──────────────────────
-
-function buildPhoneOverlaysSvg(
-  canvasW: number,
-  canvasH: number,
-  phoneX: number,
-  phoneY: number,
-  phoneW: number,
-  phoneH: number,
-  bezel: number,
-  fc: DeviceFrameConfig,
-): string {
-  const screenX = phoneX + bezel;
-  const screenY = phoneY + bezel;
-  const screenH = phoneH - bezel * 2;
-
-  let notchSvg = '';
-  if (fc.dynamicIsland && fc.notchWidth > 0) {
-    const nw = Math.round(phoneW * fc.notchWidth);
-    const nh = Math.round(phoneW * fc.notchHeight);
-    const nx = phoneX + Math.round((phoneW - nw) / 2);
-    const ny = screenY + Math.round(bezel * 0.8);
-    const nr = Math.round(nh / 2); // pill shape
-    notchSvg = `<rect x="${nx}" y="${ny}" width="${nw}" height="${nh}"
-      rx="${nr}" ry="${nr}" fill="#000000"/>`;
-  }
-
-  let homeBarSvg = '';
-  if (fc.homeBarWidth > 0 && !fc.homeButton) {
-    const bw = Math.round(phoneW * fc.homeBarWidth);
-    const bh = Math.round(phoneW * fc.homeBarHeight);
-    const bx = phoneX + Math.round((phoneW - bw) / 2);
-    const by = screenY + screenH - Math.round(bezel * 0.8) - bh;
-    const br = Math.round(bh / 2);
-    homeBarSvg = `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}"
-      rx="${br}" ry="${br}" fill="rgba(255,255,255,0.25)"/>`;
-  }
-
-  let homeButtonSvg = '';
-  if (fc.homeButton) {
-    const btnR = Math.round(phoneW * 0.05);
-    const btnCx = phoneX + Math.round(phoneW / 2);
-    const btnCy = phoneY + phoneH - Math.round(bezel * 2.2);
-    homeButtonSvg = `<circle cx="${btnCx}" cy="${btnCy}" r="${btnR}"
-      fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>`;
-  }
-
-  return `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-    ${notchSvg}${homeBarSvg}${homeButtonSvg}
-  </svg>`;
-}
-
-// ─── Phone shadow ──────────────────────────────────────────
-
-async function buildPhoneShadow(
-  canvasW: number,
-  canvasH: number,
-  phoneX: number,
-  phoneY: number,
-  phoneW: number,
-  phoneH: number,
-  bodyRadius: number,
-): Promise<Buffer> {
-  const sigma = Math.max(1, Math.round(phoneW * 0.08));
-  const offsetY = Math.round(phoneH * 0.05);
-  const pad = sigma * 3; // 3-sigma covers 99.7% of Gaussian spread
-
-  const svgW = canvasW + pad * 2;
-  const svgH = canvasH + pad * 2;
-
-  // Phone rect positioned within padded SVG (pad offset accounts for canvas origin)
-  const rectX = phoneX + pad;
-  const rectY = phoneY + pad + offsetY;
-
-  const svg = `<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
-    <rect x="${rectX}" y="${rectY}" width="${phoneW}" height="${phoneH}"
-      rx="${bodyRadius}" ry="${bodyRadius}" fill="rgba(0,0,0,0.4)"/>
-  </svg>`;
-
-  return sharp(Buffer.from(svg))
-    .blur(sigma)
-    .extract({ left: pad, top: pad, width: canvasW, height: canvasH })
-    .png()
-    .toBuffer();
-}
-
-// ─── Device-mode text overlay ──────────────────────────────
-
-function buildDeviceTextSvg(
-  canvasW: number,
-  canvasH: number,
-  title: string | undefined,
-  subtitle: string | undefined,
-  opts: FrameOptions,
-): string {
-  const cx = Math.round(canvasW / 2);
-  const font = `'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
-  const titleFontSize = Math.round(canvasW * opts.titleSize);
-  const subtitleFontSize = Math.round(canvasW * opts.subtitleSize);
-  const titleSpacing = Math.max(1, Math.round(titleFontSize * 0.08));
-  const titleAttrs = `text-anchor="middle" font-size="${titleFontSize}" font-weight="800" fill="${opts.titleColor}" font-family="${font}" letter-spacing="${titleSpacing}"`;
-  const subtitleSpacing = Math.max(1, Math.round(subtitleFontSize * 0.01));
-  const subtitleAttrs = `text-anchor="middle" font-size="${subtitleFontSize}" font-weight="500" fill="${opts.subtitleColor}" font-family="${font}" letter-spacing="${subtitleSpacing}"`;
-
-  let textElements = '';
-
-  if (opts.textPosition === 'top') {
-    const topPad = Math.round(canvasH * 0.072);
-    let y = topPad;
-
-    if (title) {
-      const lines = title.split('\\n');
-      y += Math.round(titleFontSize * 1.15);
-      textElements += renderMultilineText(lines, cx, y, titleFontSize, 1.15, titleAttrs);
-      y += (lines.length - 1) * Math.round(titleFontSize * 1.15);
-    }
-
-    if (subtitle) {
-      y += Math.round(titleFontSize * 0.4) + subtitleFontSize;
-      textElements += `<text x="${cx}" y="${y}" ${subtitleAttrs}>${escapeXml(subtitle)}</text>`;
-    }
-  } else {
-    const bottomPad = Math.round(canvasH * 0.086);
-    let y = canvasH - bottomPad;
-
-    if (subtitle) {
-      textElements += `<text x="${cx}" y="${y}" ${subtitleAttrs}>${escapeXml(subtitle)}</text>`;
-      y -= Math.round(subtitleFontSize * 1.8);
-    }
-
-    if (title) {
-      const lines = title.split('\\n');
-      const lineH = Math.round(titleFontSize * 1.15);
-      const firstLineY = y - (lines.length - 1) * lineH;
-      textElements += renderMultilineText(lines, cx, firstLineY, titleFontSize, 1.15, titleAttrs);
-    }
-  }
-
-  return `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-    ${textElements}
-  </svg>`;
-}
-
-function renderMultilineText(
-  lines: string[],
-  x: number,
-  y: number,
-  fontSize: number,
-  lineHeight: number,
-  attrs: string,
-): string {
-  if (lines.length === 1) {
-    return `<text x="${x}" y="${y}" ${attrs}>${escapeXml(lines[0])}</text>`;
-  }
-  const dy = Math.round(fontSize * lineHeight);
-  let svg = `<text ${attrs}>`;
-  for (let i = 0; i < lines.length; i++) {
-    svg += `<tspan x="${x}" ${i === 0 ? `y="${y}"` : `dy="${dy}"`}>${escapeXml(lines[i])}</tspan>`;
-  }
-  svg += '</text>';
-  return svg;
+  return compositeOntoCanvas(canvasW, canvasH, bg, layers);
 }
 
 // ─── Frame WITHOUT device bezel ────────────────────────────
 
 async function frameWithoutDevice(
-  input: string,
+  input: string | Buffer,
   opts: FrameOptions,
   canvasW: number,
   canvasH: number,
@@ -500,6 +300,8 @@ async function frameWithoutDevice(
   titleFontSize: number,
   subtitleFontSize: number,
   hasOverlay: boolean,
+  stickers: StickerPlacement[],
+  customFonts: CustomFont[],
 ): Promise<Buffer> {
   const cornerR = Math.round(areaW * opts.borderRadius);
 
@@ -524,7 +326,7 @@ async function frameWithoutDevice(
     ? buildPatternSvg(canvasW, canvasH, opts.pattern, opts.patternColor, opts.patternOpacity)
     : null;
   const textSvg = hasOverlay
-    ? buildTextSvg(canvasW, padY, titleH, subtitleH, titleFontSize, subtitleFontSize, title, subtitle, opts)
+    ? await buildTextSvg(canvasW, padY, titleH, subtitleH, titleFontSize, subtitleFontSize, title, subtitle, opts, customFonts)
     : null;
 
   let shadowBuf: Buffer | null = null;
@@ -541,16 +343,22 @@ async function frameWithoutDevice(
   if (patternSvg) {
     layers.push({ input: Buffer.from(patternSvg), top: 0, left: 0 });
   }
+
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'background'));
+
   if (shadowBuf) {
     layers.push({ input: shadowBuf, top: topOffset - 40 + 8, left: padX - 40 });
   }
   layers.push({ input: rounded, top: topOffset, left: padX });
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'behind-text'));
   if (textSvg) {
     layers.push({ input: Buffer.from(textSvg), top: 0, left: 0 });
   }
 
+  layers.push(...await buildStickerLayers(stickers, canvasW, canvasH, 'foreground'));
+
   const bg = await sharp(Buffer.from(bgSvg)).png().toBuffer();
-  return sharp(bg).composite(layers).png({ quality: 100 }).toBuffer();
+  return compositeOntoCanvas(canvasW, canvasH, bg, layers);
 }
 
 // ─── Background SVG ────────────────────────────────────────
@@ -632,7 +440,7 @@ function buildPatternSvg(
 
 // ─── Text SVG (non-device mode) ────────────────────────────
 
-function buildTextSvg(
+async function buildTextSvg(
   canvasW: number,
   padY: number,
   titleH: number,
@@ -642,28 +450,33 @@ function buildTextSvg(
   title: string | undefined,
   subtitle: string | undefined,
   opts: FrameOptions,
-): string {
+  customFonts: CustomFont[],
+): Promise<string> {
   const cx = Math.round(canvasW / 2);
-  const font = `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
+  const titleAttrs = buildTextAttrs('title', opts, titleFontSize, customFonts);
+  const subtitleAttrs = buildTextAttrs('subtitle', opts, subtitleFontSize, customFonts);
+
+  const fontFaces = await buildFontFaces([opts.titleFont, opts.subtitleFont], customFonts);
+  const filters = buildTextFilters(opts);
 
   let textElements = '';
 
   if (title) {
     const titleY = padY + Math.round(titleFontSize * 1.25);
-    const ls = Math.max(1, Math.round(titleFontSize * 0.08));
-    textElements += `<text x="${cx}" y="${titleY}" text-anchor="middle"
-      font-size="${titleFontSize}" font-weight="800" fill="${opts.titleColor}"
-      font-family="${font}" letter-spacing="${ls}">${escapeXml(title)}</text>`;
+    const text = formatTextContent(title, opts.titleUppercase);
+    textElements += `<text x="${cx}" y="${titleY}" ${titleAttrs}>${escapeXml(text)}</text>`;
   }
 
   if (subtitle) {
     const subtitleY = padY + titleH + Math.round(subtitleFontSize * 1.4);
-    textElements += `<text x="${cx}" y="${subtitleY}" text-anchor="middle"
-      font-size="${subtitleFontSize}" font-weight="500" fill="${opts.subtitleColor}"
-      font-family="${font}">${escapeXml(subtitle)}</text>`;
+    const text = formatTextContent(subtitle, opts.subtitleUppercase);
+    textElements += `<text x="${cx}" y="${subtitleY}" ${subtitleAttrs}>${escapeXml(text)}</text>`;
   }
 
+  const styleBlock = fontFaces ? `<style>${fontFaces}</style>` : '';
+
   return `<svg width="${canvasW}" height="${padY + titleH + subtitleH}" xmlns="http://www.w3.org/2000/svg">
+    <defs>${styleBlock}${filters}</defs>
     ${textElements}
   </svg>`;
 }

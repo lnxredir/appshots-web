@@ -1,6 +1,6 @@
-# appshots
+# appshots-web
 
-Turn raw app screenshots into App Store-ready promotional images — from the CLI.
+Turn raw app screenshots into App Store-ready promotional images — in your browser.
 
 <p align="center">
   <img src="examples/hero.png" alt="appshots example output" width="100%" />
@@ -8,207 +8,106 @@ Turn raw app screenshots into App Store-ready promotional images — from the CL
 
 ## What it does
 
-Take any screenshot from your app and turn it into a polished, store-ready image with one command:
+Upload a screenshot from your simulator, device, or browser and turn it into a polished, store-ready image with the visual editor:
 
 <p align="center">
   <img src="examples/before-after.png" alt="Before and after framing" width="600" />
 </p>
 
-```bash
-npx appshots frame screenshot.png \
-  --device iphone-6.9 \
-  --background "linear-gradient(135deg, #667eea, #764ba2)" \
-  --title "AI Menu Analysis" \
-  --subtitle "Ranked by your goals"
-```
+**appshots-web** is a self-hosted web studio for App Store screenshot design:
 
-**appshots** handles three things:
-
-1. **Frame** — wrap raw screenshots in realistic device frames with backgrounds, shadows, and text
-2. **Capture** — screenshot a running web app at exact device pixel ratios
-3. **Validate** — check dimensions, format, and file size against store requirements
+1. **Frame** — wrap screenshots in realistic device frames with backgrounds, shadows, and text
+2. **Style** — customize gradients, patterns, fonts, stickers, and placement with live preview
+3. **Export** — download pixel-perfect PNGs at exact store dimensions
 
 26 built-in device presets: iPhone, iPad, Android, Mac, Apple Watch, Apple TV, Vision Pro.
 
+### Modes
+
+- **Single** — one screenshot per export, ideal for individual store images
+- **Seamless** — design a wide canvas that slices into multiple App Store screenshots, with elements spanning panel boundaries
+
+## Credits
+
+This project is a web-first fork of [appshots](https://github.com/albertnahas/appshots) by [Albert Nahas](https://github.com/albertnahas). Thank you to the original author for the framing engine, device presets, and CLI foundation that made this web studio possible.
+
 ## Install
 
-```bash
-npm install -g appshots
-```
+### Docker (recommended)
 
-Or run directly without installing:
+Requires [Docker](https://docs.docker.com/get-docker/) and Docker Compose.
 
 ```bash
-npx appshots frame ./my-screenshots --device iphone-6.9
+git clone https://github.com/lnxredir/appshots-web.git
+cd appshots-web
+cp .env.example .env   # optional — defaults to port 8084
+docker compose up --build -d
 ```
 
-> **Note:** The `capture` command requires Playwright (`npm i -D playwright`). The `frame` and `validate` commands work without it.
+Open [http://localhost:8084](http://localhost:8084).
+
+Override the port in `.env` or inline:
+
+```bash
+APPSHOTS_PORT=9000 docker compose up --build -d
+```
+
+### From source (development)
+
+Requires Node.js 20+.
+
+```bash
+git clone https://github.com/lnxredir/appshots-web.git
+cd appshots-web
+npm ci
+npm run build
+npm run ui
+```
+
+The UI dev server runs at [http://localhost:5173](http://localhost:5173) and proxies API requests to the backend.
 
 ## Quick Start
 
-### 1. Frame existing screenshots
-
-You already have screenshots from your simulator, phone, or browser. Make them store-ready:
+### 1. Start the app
 
 ```bash
-# Simple — just resize to exact App Store dimensions
-appshots frame ./screenshots --device iphone-6.9
-
-# Promotional — add background gradient and text
-appshots frame ./screenshots \
-  --device iphone-6.9 \
-  --background "linear-gradient(135deg, #667eea, #764ba2)" \
-  --title "Your App Name" \
-  --subtitle "Your tagline here"
-
-# Alternate text position (text on top, phone from bottom)
-appshots frame ./screenshots --device iphone-6.9 \
-  --background "linear-gradient(170deg, #134E4A, #14B8A6)" \
-  --title "Scan Any Menu" --subtitle "Photo, URL, or PDF" \
-  --text-position top
-
-# Silver device frame
-appshots frame ./screenshots --device iphone-6.9 \
-  --background "linear-gradient(135deg, #f093fb, #f5576c)" \
-  --frame-color silver --title "Premium Look"
-
-# Pattern background
-appshots frame ./screenshots --device iphone-6.9 \
-  --background "#1a1a2e" --pattern dots --title "Dashboard"
-
-# Process a single file
-appshots frame home.png --device iphone-6.9 -o ./store-ready
+docker compose up --build -d
 ```
 
-### 2. Capture from a running web app
+### 2. Upload a screenshot
 
-Point appshots at your running app and it captures pixel-perfect screenshots:
+Open the app in your browser, choose **Single** mode, and drop a PNG, JPEG, or WebP screenshot onto the upload zone.
 
-```bash
-# Capture specific pages
-appshots capture --url http://localhost:3000 --device iphone-6.9 --path / /features /pricing
+### 3. Pick a device and style it
 
-# Use a config file for repeatable captures
-appshots capture --config appshots.config.ts
-```
+- Select a device preset (e.g. iPhone 6.9")
+- Choose portrait or landscape
+- Set a background gradient, pattern, or solid color
+- Add title and subtitle text with full styling controls
+- Drag the phone frame to reposition; use alignment and size sliders in the sidebar
 
-### 3. Validate before uploading
+### 4. Download
 
-Check that your screenshots meet App Store / Play Store requirements:
+Click **Download PNG** to export an App Store-ready image at the exact pixel dimensions for your selected device.
 
-```bash
-appshots validate ./screenshots
-#   ✓ home.png         1320x2868  (iPhone 6.9")
-#   ✓ results.png      1320x2868  (iPhone 6.9")
-#   ✗ old-screen.png   1080x1920  → PNG has transparency. App Store requires no transparency.
-```
+### Seamless carousel
 
-### 4. List device presets
+Switch to **Seamless** mode to design a multi-panel wide canvas:
 
-```bash
-appshots devices
-appshots devices --platform ios
-appshots devices --category tablet
-```
+1. Set the panel count (2–5)
+2. Add phone frames and position screenshots across panels
+3. Add per-panel title and subtitle text
+4. Use **Download all** to export each panel as a separate PNG
 
-### 5. Generate a config file
+## Configuration
 
-```bash
-appshots init
-# Creates appshots.config.ts in the current directory
-```
+Optional environment variables (set in `.env` or passed to Docker Compose):
 
-## Config File
-
-For repeatable workflows, create an `appshots.config.ts`:
-
-```typescript
-import { defineConfig } from 'appshots';
-
-export default defineConfig({
-  devices: ['iphone-6.9', 'ipad-13'],
-
-  frame: {
-    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-    padding: 0.08,
-    borderRadius: 0.04,
-    titleColor: '#ffffff',
-    subtitleColor: 'rgba(255,255,255,0.7)',
-    shadow: true,
-    frameColor: 'black',
-    textPosition: 'bottom',
-    pattern: 'dots',
-    patternOpacity: 0.1,
-  },
-
-  capture: {
-    baseUrl: 'http://localhost:3000',
-    screens: [
-      {
-        name: 'home',
-        path: '/',
-        title: 'Welcome Home',
-        subtitle: 'Everything you need',
-        waitFor: 'Welcome',
-      },
-      {
-        name: 'features',
-        path: '/features',
-        title: 'Powerful Features',
-        delay: 2000,
-      },
-    ],
-  },
-
-  output: './screenshots',
-});
-```
-
-Also supports `.js`, `.mjs`, and `.json` formats.
-
-## CLI Reference
-
-### `appshots frame <input>`
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-d, --device <slug>` | Target device preset | `iphone-6.9` |
-| `-o, --output <dir>` | Output directory | `./screenshots/framed` |
-| `-b, --background <value>` | Solid color or CSS gradient | `#000000` |
-| `-t, --title <text>` | Title text overlay | — |
-| `-s, --subtitle <text>` | Subtitle text overlay | — |
-| `--padding <ratio>` | Padding ratio (0–0.4) | `0.08` |
-| `--border-radius <ratio>` | Corner radius ratio (0–0.2) | `0.04` |
-| `--landscape` | Landscape orientation | — |
-| `--no-shadow` | Disable drop shadow | — |
-| `--no-device-frame` | Disable device frame bezel | — |
-| `--frame-color <color>` | Frame color: `black`, `silver`, `gold`, `blue`, `red`, `white`, or hex | `black` |
-| `--pattern <name>` | Background pattern: `dots`, `grid`, `diagonal`, `waves`, `diamonds`, `cross-dots` | — |
-| `--pattern-opacity <ratio>` | Pattern opacity (0–1) | `0.1` |
-| `--text-position <pos>` | Text position: `top` or `bottom` | `bottom` |
-| `-c, --config <path>` | Config file path | — |
-
-### `appshots capture`
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-u, --url <url>` | Base URL of the running app | `http://localhost:3000` |
-| `-d, --device <slug>` | Target device preset | `iphone-6.9` |
-| `-p, --path <paths...>` | URL paths to capture | — |
-| `-o, --output <dir>` | Output directory | `./screenshots` |
-| `--landscape` | Landscape orientation | — |
-| `-c, --config <path>` | Config file path | — |
-
-### `appshots validate <dir>`
-
-Checks: dimensions, format (PNG/JPEG), transparency, file size (< 10 MB), color space (sRGB).
-
-### `appshots devices`
-
-| Option | Description |
-|--------|-------------|
-| `--platform <name>` | Filter by platform (`ios`, `android`, `macos`, `watchos`, `tvos`, `visionos`) |
-| `--category <name>` | Filter by category (`phone`, `tablet`, `desktop`, `watch`, `tv`, `headset`) |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APPSHOTS_PORT` | HTTP port for the web UI and API | `8084` |
+| `APPSHOTS_HOST` | Bind address inside the container | `0.0.0.0` |
+| `APPSHOTS_TAG` | Docker image tag | `latest` |
 
 ## Device Presets
 
@@ -228,28 +127,21 @@ Checks: dimensions, format (PNG/JPEG), transparency, file size (< 10 MB), color 
 | `android-tablet-10` | 1600 x 2560 | 10" Android tablet |
 | `mac` | 2880 x 1800 | MacBook Pro |
 
-Run `appshots devices` for all 26 presets including Apple Watch, Apple TV, and Vision Pro.
+The editor includes all 26 presets covering Apple Watch, Apple TV, and Vision Pro.
 
-## Programmatic API
+## Production deployment
 
-```typescript
-import { frameScreenshot, captureScreenshots, validateScreenshots, getDevice } from 'appshots';
+```bash
+# Pull latest and rebuild
+git pull
+docker compose up --build -d
 
-// Frame a screenshot
-const buffer = await frameScreenshot({
-  input: './screenshot.png',
-  device: 'iphone-6.9',
-  title: 'Welcome',
-  options: { background: 'linear-gradient(135deg, #667eea, #764ba2)' },
-});
-
-// Get device specs
-const spec = getDevice('iphone-6.9');
-// { name: 'iPhone 6.9"', width: 1320, height: 2868, dpr: 3, ... }
-
-// Validate a directory
-const results = await validateScreenshots('./screenshots');
+# Check health
+docker compose ps
+curl -sf http://localhost:8084/api/devices | head -c 200
 ```
+
+The container exposes a health check on `/api/devices` and restarts automatically unless stopped.
 
 ## License
 

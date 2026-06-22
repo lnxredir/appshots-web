@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#667eea"/>
+      <stop offset="1" stop-color="#764ba2"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="168" y1="100" x2="344" y2="412" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a2a3a"/>
+      <stop offset="1" stop-color="#12121a"/>
+    </linearGradient>
+    <linearGradient id="ui" x1="176" y1="140" x2="336" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#667eea" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#764ba2" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="shadow" x="120" y="56" width="272" height="416" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0a0a0f" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="156" y="72" width="200" height="368" rx="34" fill="#0a0a0f"/>
+    <rect x="164" y="80" width="184" height="352" rx="28" fill="#1a1a26" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2"/>
+    <rect x="168" y="100" width="176" height="312" rx="10" fill="url(#screen)"/>
+    <rect x="208" y="108" width="96" height="14" rx="7" fill="#0a0a0f"/>
+    <rect x="176" y="140" width="160" height="88" rx="12" fill="url(#ui)"/>
+    <rect x="176" y="244" width="112" height="12" rx="6" fill="#ffffff" fill-opacity="0.85"/>
+    <rect x="176" y="268" width="144" height="10" rx="5" fill="#ffffff" fill-opacity="0.35"/>
+    <rect x="176" y="288" width="128" height="10" rx="5" fill="#ffffff" fill-opacity="0.25"/>
+    <rect x="176" y="324" width="160" height="56" rx="10" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.12"/>
+    <circle cx="196" cy="352" r="10" fill="#667eea"/>
+    <rect x="216" y="344" width="96" height="8" rx="4" fill="#ffffff" fill-opacity="0.45"/>
+    <rect x="216" y="360" width="72" height="6" rx="3" fill="#ffffff" fill-opacity="0.25"/>
+  </g>
+  <rect x="220" y="424" width="72" height="6" rx="3" fill="#ffffff" fill-opacity="0.18"/>
+</svg>

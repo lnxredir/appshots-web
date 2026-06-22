@@ -42,16 +42,90 @@ export const frameOptionsSchema = z.object({
   subtitleColor: z.string().default('rgba(255,255,255,0.7)'),
   titleSize: z.number().min(0).max(0.2).default(0.087),
   subtitleSize: z.number().min(0).max(0.1).default(0.043),
+  titleFont: z.string().default('Inter'),
+  subtitleFont: z.string().default('Inter'),
+  titleBold: z.boolean().default(true),
+  subtitleBold: z.boolean().default(false),
+  titleItalic: z.boolean().default(false),
+  subtitleItalic: z.boolean().default(false),
+  titleUnderline: z.boolean().default(false),
+  subtitleUnderline: z.boolean().default(false),
+  titleStrikethrough: z.boolean().default(false),
+  subtitleStrikethrough: z.boolean().default(false),
+  titleUppercase: z.boolean().default(false),
+  subtitleUppercase: z.boolean().default(false),
+  titleShadow: z.boolean().default(false),
+  subtitleShadow: z.boolean().default(false),
+  titleLetterSpacing: z.number().min(-0.05).max(0.3).optional(),
+  subtitleLetterSpacing: z.number().min(-0.05).max(0.3).optional(),
   shadow: z.boolean().default(true),
   deviceFrame: z.boolean().default(true),
   frameColor: z.string().default('black'),
   textPosition: z.enum(['top', 'bottom']).default('bottom'),
+  freePosition: z.boolean().optional(),
+  titleX: z.number().min(0).max(1).optional(),
+  titleY: z.number().min(0).max(1).optional(),
+  subtitleX: z.number().min(0).max(1).optional(),
+  subtitleY: z.number().min(0).max(1).optional(),
+  /** Top-left X ratio of canvas width for the device frame */
+  screenshotX: z.number().optional(),
+  /** Top-left Y ratio of canvas height for the device frame */
+  screenshotY: z.number().optional(),
+  /** Width scale multiplier on default phone size */
+  screenshotWidth: z.number().min(0.3).max(1.5).optional(),
+  /** Rotation in degrees */
+  screenshotRotation: z.number().min(-45).max(45).optional(),
+  /** Snap screenshot movement to a resolution-based grid in the UI */
+  gridAlign: z.boolean().optional(),
+  /** Snap free-positioned text movement to a resolution-based grid in the UI */
+  textGridAlign: z.boolean().optional(),
   pattern: z.string().optional(),
   patternOpacity: z.number().min(0).max(1).default(0.1),
   patternColor: z.string().default('#ffffff'),
 });
 
 export type FrameOptions = z.infer<typeof frameOptionsSchema>;
+
+export interface StickerPlacement {
+  /** Image data */
+  image: Buffer;
+  /** Horizontal position as ratio of canvas width (0–1), top-left */
+  x: number;
+  /** Vertical position as ratio of canvas height (0–1), top-left */
+  y: number;
+  /** Width as ratio of canvas width (0–1) */
+  width: number;
+  /** Layer relative to device frame and text */
+  layer: 'background' | 'behind-text' | 'foreground';
+}
+
+export interface CustomFont {
+  /** Unique identifier — referenced as custom:{id} in titleFont/subtitleFont */
+  id: string;
+  /** CSS font-family name */
+  family: string;
+  /** Raw font file data */
+  data: Buffer;
+}
+
+export interface SeamlessPanelText {
+  title?: string;
+  subtitle?: string;
+  style?: Partial<FrameOptions>;
+}
+
+export interface SeamlessDevicePlacement {
+  id: string;
+  image: Buffer;
+  /** Top-left X as ratio of wide canvas width (can be negative or > 1) */
+  x: number;
+  /** Top-left Y as ratio of panel height */
+  y: number;
+  /** Phone width as ratio of single panel width */
+  width: number;
+  /** Rotation in degrees */
+  rotation: number;
+}
 
 export const configSchema = z.object({
   devices: z.array(z.string()).default(['iphone-6.9']),

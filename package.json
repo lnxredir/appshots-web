@@ -1,7 +1,7 @@
 {
-  "name": "appshots",
-  "version": "1.2.1",
-  "description": "Generate App Store-ready screenshots from your web app. Capture, frame, and validate — all from the CLI.",
+  "name": "appshots-web",
+  "version": "0.1.6",
+  "description": "Generate App Store-ready screenshots in your browser — frame, style, and export with a self-hosted web studio.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "ui": "npm run dev --prefix ui",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
   },
@@ -42,11 +43,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/albertnahas/appshots.git"
+    "url": "git+https://github.com/lnxredir/appshots-web.git"
   },
-  "homepage": "https://github.com/albertnahas/appshots#readme",
+  "homepage": "https://github.com/lnxredir/appshots-web#readme",
   "bugs": {
-    "url": "https://github.com/albertnahas/appshots/issues"
+    "url": "https://github.com/lnxredir/appshots-web/issues"
   },
   "dependencies": {
     "chalk": "^5.3.0",

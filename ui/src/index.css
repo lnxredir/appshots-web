@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-surface: #0a0a0f;
+  --color-panel: #12121a;
+  --color-panel-hover: #1a1a26;
+  --color-border: #2a2a3a;
+  --color-muted: #8888a0;
+  --color-accent: #667eea;
+  --color-accent-2: #764ba2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: #f0f0f5;
+  -webkit-font-smoothing: antialiased;
+}
+
+input[type='range'] {
+  accent-color: var(--color-accent);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4f;
+}
+
+@keyframes overflow-flash-fill {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes overflow-flash-border {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.overflow-flash-fill {
+  animation: overflow-flash-fill 0.7s ease-in-out infinite;
+}
+
+.overflow-flash-border {
+  animation: overflow-flash-border 0.7s ease-in-out infinite;
+}
