@@ -43,6 +43,10 @@ export interface FrameOptions {
   gridAlign?: boolean;
   /** Snap free-positioned text movement to a resolution-based grid in the UI */
   textGridAlign?: boolean;
+  /** Horizontal text alignment within each panel */
+  textAlignH?: 'left' | 'center' | 'right';
+  /** Vertical text alignment within each panel */
+  textAlignV?: 'top' | 'middle' | 'bottom';
   pattern?: string;
   patternOpacity?: number;
   patternColor?: string;
@@ -106,6 +110,8 @@ export type PanelTextStyle = Pick<
   | 'subtitleX'
   | 'subtitleY'
   | 'textGridAlign'
+  | 'textAlignH'
+  | 'textAlignV'
 >;
 
 export interface DevicePlacement {

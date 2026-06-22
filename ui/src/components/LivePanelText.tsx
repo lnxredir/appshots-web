@@ -1,7 +1,9 @@
 import { resolveFontCss } from '../lib/custom-fonts';
 import {
   panelEffectiveOptions,
+  resolveTextAlignH,
   resolveTextPositions,
+  textAnchorTransform,
   textElementId,
 } from '../lib/panel-text-layout';
 import type { CustomFont, FrameOptions, SeamlessPanelConfig } from '../types';
@@ -32,6 +34,7 @@ function textStyle(
   opts: Partial<FrameOptions>,
   customFonts: CustomFont[],
   fontSize: number,
+  alignH: 'left' | 'center' | 'right',
 ): React.CSSProperties {
   const isTitle = role === 'title';
   const font = (isTitle ? opts.titleFont : opts.subtitleFont) ?? 'Inter';
@@ -62,7 +65,7 @@ function textStyle(
     textShadow: shadow ? '0 3px 10px rgba(0,0,0,0.5)' : undefined,
     lineHeight: isTitle ? 1.15 : 1.2,
     whiteSpace: 'pre-line',
-    textAlign: 'center',
+    textAlign: alignH,
   };
 }
 
@@ -78,6 +81,7 @@ function TextBlock({
   wideW,
   imageRect,
   style,
+  alignH,
   freePosition,
   selected,
   isDragging,
@@ -95,6 +99,7 @@ function TextBlock({
   wideW: number;
   imageRect: { width: number; height: number };
   style: React.CSSProperties;
+  alignH: 'left' | 'center' | 'right';
   freePosition: boolean;
   selected: boolean;
   isDragging: boolean;
@@ -103,12 +108,14 @@ function TextBlock({
 }) {
   const scaleX = imageRect.width / wideW;
   const scaleY = imageRect.height / panelHeight;
-  const centerX = (panelIndex * panelWidth + anchorX * panelWidth) * scaleX;
+  const panelScreenW = panelWidth * scaleX;
+  const anchorScreenX = (panelIndex * panelWidth + anchorX * panelWidth) * scaleX;
   const baselineY = anchorY * panelHeight * scaleY;
+  const { transform } = textAnchorTransform(alignH);
 
   return (
     <div
-      className={`absolute max-w-[90%] -translate-x-1/2 touch-none ${
+      className={`absolute touch-none ${
         freePosition
           ? `rounded-md border-2 border-dashed px-2 py-0.5 ${
               selected ? 'border-accent bg-accent/10' : 'border-transparent hover:border-white/25'
@@ -116,9 +123,10 @@ function TextBlock({
           : 'pointer-events-none border-transparent'
       }`}
       style={{
-        left: centerX,
+        left: anchorScreenX,
         top: baselineY,
-        transform: 'translate(-50%, -100%)',
+        transform,
+        maxWidth: panelScreenW * 0.84,
         ...style,
       }}
       onPointerDown={freePosition ? (e) => onPointerDown(e, id) : undefined}
@@ -149,6 +157,8 @@ export function LivePanelText({
   const positions = resolveTextPositions(panelWidth, panelHeight, panel, globalOptions);
   const titleFontSize = panelWidth * (opts.titleSize ?? 0.087) * (imageRect.width / wideW);
   const subtitleFontSize = panelWidth * (opts.subtitleSize ?? 0.043) * (imageRect.width / wideW);
+  const titleAlignH = resolveTextAlignH(opts, positions.titleX);
+  const subtitleAlignH = resolveTextAlignH(opts, positions.subtitleX);
 
   return (
     <>
@@ -164,7 +174,8 @@ export function LivePanelText({
           panelHeight={panelHeight}
           wideW={wideW}
           imageRect={imageRect}
-          style={textStyle('title', opts, customFonts, titleFontSize)}
+          alignH={titleAlignH}
+          style={textStyle('title', opts, customFonts, titleFontSize, titleAlignH)}
           freePosition={freePosition}
           selected={selectedId === textElementId(panelIndex, 'title')}
           isDragging={draggingId === textElementId(panelIndex, 'title')}
@@ -185,7 +196,8 @@ export function LivePanelText({
           panelHeight={panelHeight}
           wideW={wideW}
           imageRect={imageRect}
-          style={textStyle('subtitle', opts, customFonts, subtitleFontSize)}
+          alignH={subtitleAlignH}
+          style={textStyle('subtitle', opts, customFonts, subtitleFontSize, subtitleAlignH)}
           freePosition={freePosition}
           selected={selectedId === textElementId(panelIndex, 'subtitle')}
           isDragging={draggingId === textElementId(panelIndex, 'subtitle')}

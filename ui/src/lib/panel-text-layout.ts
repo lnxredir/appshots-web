@@ -85,12 +85,27 @@ export function resolveTextPositionsFromOptions(
   opts: Partial<FrameOptions>,
 ): PanelTextPositions {
   const defaults = computeDefaultTextPositions(panelW, panelH, title, subtitle, opts);
-  return {
+  const positions = {
     titleX: opts.titleX ?? defaults.titleX,
     titleY: opts.titleY ?? defaults.titleY,
     subtitleX: opts.subtitleX ?? defaults.subtitleX,
     subtitleY: opts.subtitleY ?? defaults.subtitleY,
   };
+
+  if (!usesFreeTextLayout(opts) && (opts.textAlignH || opts.textAlignV)) {
+    return applyTextAlign(
+      positions,
+      opts.textAlignH ?? null,
+      opts.textAlignV ?? null,
+      title,
+      subtitle,
+      panelW,
+      panelH,
+      opts,
+    );
+  }
+
+  return positions;
 }
 
 export type TextAlignH = 'left' | 'center' | 'right';
@@ -151,6 +166,35 @@ export function applyTextAlign(
   return { titleX, titleY, subtitleX, subtitleY };
 }
 
+export function resolveTextAlignH(
+  opts: Partial<FrameOptions>,
+  anchorX: number,
+): TextAlignH {
+  if (opts.textAlignH) return opts.textAlignH;
+  const m = TEXT_ALIGN_MARGIN;
+  if (Math.abs(anchorX - m) < 0.02) return 'left';
+  if (Math.abs(anchorX - (1 - m)) < 0.02) return 'right';
+  return 'center';
+}
+
+export function textAnchorTransform(alignH: TextAlignH): {
+  transform: string;
+  textAlign: 'left' | 'center' | 'right';
+} {
+  switch (alignH) {
+    case 'left':
+      return { transform: 'translate(0, -100%)', textAlign: 'left' };
+    case 'right':
+      return { transform: 'translate(-100%, -100%)', textAlign: 'right' };
+    default:
+      return { transform: 'translate(-50%, -100%)', textAlign: 'center' };
+  }
+}
+
+export function svgTextAnchor(alignH: TextAlignH): 'start' | 'middle' | 'end' {
+  return alignH === 'left' ? 'start' : alignH === 'right' ? 'end' : 'middle';
+}
+
 export function resolveTextPositions(
   panelW: number,
   panelH: number,
@@ -158,13 +202,7 @@ export function resolveTextPositions(
   globalOptions: Partial<FrameOptions>,
 ): PanelTextPositions {
   const opts = panelEffectiveOptions(globalOptions, panel);
-  const defaults = computeDefaultTextPositions(panelW, panelH, panel.title, panel.subtitle, opts);
-  return {
-    titleX: opts.titleX ?? defaults.titleX,
-    titleY: opts.titleY ?? defaults.titleY,
-    subtitleX: opts.subtitleX ?? defaults.subtitleX,
-    subtitleY: opts.subtitleY ?? defaults.subtitleY,
-  };
+  return resolveTextPositionsFromOptions(panelW, panelH, panel.title, panel.subtitle, opts);
 }
 
 export function textElementId(panelIndex: number, role: 'title' | 'subtitle'): string {

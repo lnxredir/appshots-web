@@ -5,3 +5,4 @@ ui/dist/
 *.tgz
 .DS_Store
 .env
+.cursor/

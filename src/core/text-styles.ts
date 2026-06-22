@@ -167,6 +167,7 @@ export function buildTextAttrs(
   opts: FrameOptions,
   fontSize: number,
   customFonts: CustomFont[] = [],
+  textAlignH: 'left' | 'center' | 'right' = 'center',
 ): string {
   const isTitle = role === 'title';
   const font = isTitle ? opts.titleFont : opts.subtitleFont;
@@ -184,8 +185,11 @@ export function buildTextAttrs(
     : (opts.subtitleLetterSpacing ?? 0.01);
   const letterSpacing = Math.round(fontSize * spacingRatio);
 
+  const anchor =
+    textAlignH === 'left' ? 'start' : textAlignH === 'right' ? 'end' : 'middle';
+
   const parts = [
-    'text-anchor="middle"',
+    `text-anchor="${anchor}"`,
     `font-size="${fontSize}"`,
     `font-weight="${weight}"`,
     `fill="${color}"`,

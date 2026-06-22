@@ -79,6 +79,8 @@ export const frameOptionsSchema = z.object({
   gridAlign: z.boolean().optional(),
   /** Snap free-positioned text movement to a resolution-based grid in the UI */
   textGridAlign: z.boolean().optional(),
+  textAlignH: z.enum(['left', 'center', 'right']).optional(),
+  textAlignV: z.enum(['top', 'middle', 'bottom']).optional(),
   pattern: z.string().optional(),
   patternOpacity: z.number().min(0).max(1).default(0.1),
   patternColor: z.string().default('#ffffff'),

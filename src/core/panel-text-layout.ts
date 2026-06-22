@@ -1,5 +1,7 @@
 import type { FrameOptions } from '../types.js';
 
+export type TextAlignH = 'left' | 'center' | 'right';
+
 export interface PanelTextPositions {
   titleX: number;
   titleY: number;
@@ -69,6 +71,23 @@ export function computeDefaultTextPositions(
   return { titleX: cx, titleY, subtitleX: cx, subtitleY };
 }
 
+const TEXT_ALIGN_MARGIN = 0.08;
+
+export function resolveTextAlignH(
+  opts: Partial<FrameOptions>,
+  anchorX: number,
+): TextAlignH {
+  if (opts.textAlignH) return opts.textAlignH;
+  const m = TEXT_ALIGN_MARGIN;
+  if (Math.abs(anchorX - m) < 0.02) return 'left';
+  if (Math.abs(anchorX - (1 - m)) < 0.02) return 'right';
+  return 'center';
+}
+
+export function svgTextAnchor(alignH: TextAlignH): 'start' | 'middle' | 'end' {
+  return alignH === 'left' ? 'start' : alignH === 'right' ? 'end' : 'middle';
+}
+
 export function resolveTextPositions(
   panelW: number,
   panelH: number,
@@ -77,10 +96,39 @@ export function resolveTextPositions(
   opts: FrameOptions,
 ): PanelTextPositions {
   const defaults = computeDefaultTextPositions(panelW, panelH, title, subtitle, opts);
-  return {
+  const positions = {
     titleX: opts.titleX ?? defaults.titleX,
     titleY: opts.titleY ?? defaults.titleY,
     subtitleX: opts.subtitleX ?? defaults.subtitleX,
     subtitleY: opts.subtitleY ?? defaults.subtitleY,
   };
+
+  if (!usesFreeTextLayout(opts) && (opts.textAlignH || opts.textAlignV)) {
+    const margin = TEXT_ALIGN_MARGIN;
+    let { titleX, titleY, subtitleX, subtitleY } = positions;
+
+    if (opts.textAlignH === 'left') {
+      titleX = margin;
+      subtitleX = margin;
+    } else if (opts.textAlignH === 'right') {
+      titleX = 1 - margin;
+      subtitleX = 1 - margin;
+    } else if (opts.textAlignH === 'center') {
+      titleX = 0.5;
+      subtitleX = 0.5;
+    }
+
+    if (opts.textAlignV === 'top' || opts.textAlignV === 'bottom') {
+      const aligned = computeDefaultTextPositions(panelW, panelH, title, subtitle, {
+        ...opts,
+        textPosition: opts.textAlignV === 'top' ? 'top' : 'bottom',
+      });
+      if (title) titleY = aligned.titleY;
+      if (subtitle) subtitleY = aligned.subtitleY;
+    }
+
+    return { titleX, titleY, subtitleX, subtitleY };
+  }
+
+  return positions;
 }

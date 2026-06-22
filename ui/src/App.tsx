@@ -354,6 +354,8 @@ export default function App() {
         options: {
           ...prev.options,
           freePosition: true,
+          textAlignH: undefined,
+          textAlignV: undefined,
           ...(meta.role === 'title'
             ? { titleX: localX, titleY: localY }
             : { subtitleX: localX, subtitleY: localY }),
@@ -366,7 +368,12 @@ export default function App() {
       const panels = [...prev.panels];
       const panel = panels[meta.panelIndex];
       if (!panel) return prev;
-      const style = { ...panel.style, freePosition: true };
+      const style = {
+        ...panel.style,
+        freePosition: true,
+        textAlignH: undefined,
+        textAlignV: undefined,
+      };
       if (meta.role === 'title') {
         style.titleX = localX;
         style.titleY = localY;

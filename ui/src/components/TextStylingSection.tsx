@@ -103,6 +103,8 @@ export function TextStylingSection({
         titleY: undefined,
         subtitleX: undefined,
         subtitleY: undefined,
+        textAlignH: undefined,
+        textAlignV: undefined,
       });
       return;
     }
@@ -131,6 +133,19 @@ export function TextStylingSection({
   const subtitleSize = options.subtitleSize ?? 0.043;
 
   const applyAlign = (alignH: TextAlignH | null, alignV: TextAlignV | null) => {
+    if (!freePosition && alignH && !alignV) {
+      onOptionsChange({ textAlignH: alignH });
+      return;
+    }
+
+    if (!freePosition && alignV && !alignH) {
+      onOptionsChange({
+        textPosition: alignV === 'top' ? 'top' : 'bottom',
+        textAlignV: alignV,
+      });
+      return;
+    }
+
     const current = resolveTextPositionsFromOptions(
       panelWidth,
       panelHeight,
@@ -150,6 +165,8 @@ export function TextStylingSection({
     );
     onOptionsChange({
       freePosition: true,
+      ...(alignH ? { textAlignH: alignH } : {}),
+      ...(alignV ? { textAlignV: alignV } : {}),
       ...aligned,
     });
   };
@@ -202,7 +219,11 @@ export function TextStylingSection({
               key={align}
               type="button"
               onClick={() => applyAlign(align, null)}
-              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-1.5 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
+              className={`rounded-lg border px-2 py-1.5 text-xs capitalize transition ${
+                options.textAlignH === align
+                  ? 'border-accent bg-accent/15 text-white'
+                  : 'border-border bg-[#0e0e14] hover:bg-panel-hover hover:text-white'
+              }`}
             >
               {align}
             </button>
@@ -218,7 +239,11 @@ export function TextStylingSection({
               key={align}
               type="button"
               onClick={() => applyAlign(null, align)}
-              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-1.5 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
+              className={`rounded-lg border px-2 py-1.5 text-xs capitalize transition ${
+                options.textAlignV === align
+                  ? 'border-accent bg-accent/15 text-white'
+                  : 'border-border bg-[#0e0e14] hover:bg-panel-hover hover:text-white'
+              }`}
             >
               {align}
             </button>
