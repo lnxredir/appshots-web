@@ -553,6 +553,7 @@ export function PreviewPanel({
         open={overflowWarningOpen}
         title="Screenshot extends outside the frame"
         message="The highlighted red areas fall outside the export canvas and will be cropped from your final image. Reposition or resize the screenshot to keep it within the frame."
+        allowDontRemind
         onConfirm={dismissOverflowWarning}
       />
     </div>

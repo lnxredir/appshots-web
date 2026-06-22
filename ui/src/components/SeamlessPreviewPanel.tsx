@@ -443,6 +443,7 @@ export function SeamlessPreviewPanel({
         open={overflowWarningOpen}
         title="Screenshot extends outside the frame"
         message="The highlighted red areas fall outside the export canvas and will be cropped from your final image. Reposition or resize the phone frames to keep them within the frame."
+        allowDontRemind
         onConfirm={dismissOverflowWarning}
       />
     </div>
