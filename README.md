@@ -3,7 +3,7 @@
 Turn raw app screenshots into App Store-ready promotional images — in your browser.
 
 <p align="center">
-  <img src="examples/hero.png" alt="appshots example output" width="100%" />
+  <img src="examples/hero.png" alt="appshots-web example output" width="100%" />
 </p>
 
 ## What it does
@@ -17,7 +17,7 @@ Upload a screenshot from your simulator, device, or browser and turn it into a p
 **appshots-web** is a self-hosted web studio for App Store screenshot design:
 
 1. **Frame** — wrap screenshots in realistic device frames with backgrounds, shadows, and text
-2. **Style** — customize gradients, patterns, fonts, stickers, and placement with live preview
+2. **Style** — customize gradients, patterns, fonts, stickers, placement, and seamless carousels with live preview
 3. **Export** — download pixel-perfect PNGs at exact store dimensions
 
 26 built-in device presets: iPhone, iPad, Android, Mac, Apple Watch, Apple TV, Vision Pro.
@@ -29,7 +29,9 @@ Upload a screenshot from your simulator, device, or browser and turn it into a p
 
 ## Credits
 
-This project is a web-first fork of [appshots](https://github.com/albertnahas/appshots) by [Albert Nahas](https://github.com/albertnahas). Thank you to the original author for the framing engine, device presets, and CLI foundation that made this web studio possible.
+This project is a web-first fork of [appshots](https://github.com/albertnahas/appshots) by [Albert Nahas](https://github.com/albertnahas). Thank you to the original author for the framing engine, device presets, and core library that made this web studio possible.
+
+Repository: [github.com/lnxredir/appshots-web](https://github.com/lnxredir/appshots-web)
 
 ## Install
 
@@ -64,7 +66,8 @@ npm run build
 npm run ui
 ```
 
-The UI dev server runs at [http://localhost:5173](http://localhost:5173) and proxies API requests to the backend.
+- Web UI: [http://localhost:5173](http://localhost:5173)
+- API (dev): proxied from the UI to the backend on port 3847
 
 ## Quick Start
 
@@ -83,8 +86,9 @@ Open the app in your browser, choose **Single** mode, and drop a PNG, JPEG, or W
 - Select a device preset (e.g. iPhone 6.9")
 - Choose portrait or landscape
 - Set a background gradient, pattern, or solid color
-- Add title and subtitle text with full styling controls
+- Add title and subtitle text with full styling controls (fonts, size, free positioning, grid align)
 - Drag the phone frame to reposition; use alignment and size sliders in the sidebar
+- Add stickers and icons from the sidebar
 
 ### 4. Download
 
@@ -96,7 +100,7 @@ Switch to **Seamless** mode to design a multi-panel wide canvas:
 
 1. Set the panel count (2–5)
 2. Add phone frames and position screenshots across panels
-3. Add per-panel title and subtitle text
+3. Add per-panel title and subtitle text with independent styling
 4. Use **Download all** to export each panel as a separate PNG
 
 ## Configuration
@@ -132,11 +136,10 @@ The editor includes all 26 presets covering Apple Watch, Apple TV, and Vision Pr
 ## Production deployment
 
 ```bash
-# Pull latest and rebuild
 git pull
 docker compose up --build -d
 
-# Check health
+# Verify the service is healthy
 docker compose ps
 curl -sf http://localhost:8084/api/devices | head -c 200
 ```
