@@ -1,0 +1,78 @@
+---
+description: Test, version, commit, push, and deploy every change in appshots-web
+alwaysApply: true
+---
+
+# Release workflow
+
+Every code or config change in this repo **must** follow this pipeline before the task is considered done.
+
+## 1. Test locally
+
+Run and fix failures before committing:
+
+```bash
+npm ci && npm run build && npm run typecheck
+cd ui && npm ci && npm run build
+```
+
+For UI or API behavior changes, also smoke-test in dev (`npm run ui`) or hit relevant `/api/*` endpoints when practical.
+
+**Do not commit or deploy if any step fails.**
+
+## 2. Bump version
+
+Keep **both** `package.json` and `ui/package.json` `version` fields in sync.
+
+Custom semver (not standard npm patch):
+
+1. Increment **patch** by 1.
+2. If patch **> 10**: set patch to **0** and increment **minor**.
+3. If minor **> 10**: set minor to **0** and increment **major**.
+
+Examples: `0.1.6` → `0.1.7` · `0.1.10` → `0.2.0` · `0.10.10` → `1.0.0`
+
+The UI header reads version from `ui/package.json` via Vite (`__APP_VERSION__`).
+
+## 3. Commit
+
+Commit all related changes (code + version bumps) with a concise summary focused on **why**:
+
+```bash
+git add -A
+git commit -m "$(cat <<'EOF'
+Short summary of the change.
+
+Optional second sentence with detail.
+EOF
+)"
+```
+
+## 4. Push to GitHub
+
+```bash
+git push origin main
+```
+
+Remote: `https://github.com/lnxredir/appshots-web` (use `gh auth setup-git` if HTTPS auth fails).
+
+## 5. Deploy to server
+
+Sync to `root@192.168.3.10:/root/appshots` and rebuild:
+
+```bash
+rsync -avz --delete \
+  --exclude '.git' --exclude 'node_modules' --exclude 'ui/node_modules' \
+  --exclude 'ui/dist' --exclude 'dist' --exclude '.env' \
+  ./ root@192.168.3.10:/root/appshots/
+
+ssh root@192.168.3.10 'cd /root/appshots && docker compose up -d --build'
+```
+
+Verify: `curl -sf http://192.168.3.10:8084/api/devices | head -c 200`
+
+Use available SSH credentials (key or deploy password from environment). **Never commit secrets.**
+
+## Exceptions
+
+- README-only or rule-only edits still require test + version bump + commit + push + deploy unless the user explicitly says otherwise for that task.
