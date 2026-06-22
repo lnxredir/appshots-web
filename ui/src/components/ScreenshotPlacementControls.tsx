@@ -7,6 +7,7 @@ import {
   type ScreenshotAlignH,
   type ScreenshotAlignV,
 } from '../lib/screenshot-placement';
+import { PlacementAlignButtons } from './PlacementAlignButtons';
 
 interface ScreenshotPlacementControlsProps {
   settings: FrameSettings;
@@ -81,37 +82,10 @@ export function ScreenshotPlacementControls({
         Drag the phone in the preview, or use alignment and size controls below.
       </p>
 
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-muted">Horizontal align</label>
-        <div className="grid grid-cols-3 gap-2">
-          {(['left', 'center', 'right'] as const).map((align) => (
-            <button
-              key={align}
-              type="button"
-              onClick={() => applyAlign(align, null)}
-              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-2 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
-            >
-              {align}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-muted">Vertical align</label>
-        <div className="grid grid-cols-3 gap-2">
-          {(['top', 'middle', 'bottom'] as const).map((align) => (
-            <button
-              key={align}
-              type="button"
-              onClick={() => applyAlign(null, align)}
-              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-2 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
-            >
-              {align}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PlacementAlignButtons
+        onAlignH={(align) => applyAlign(align, null)}
+        onAlignV={(align) => applyAlign(null, align)}
+      />
 
       <Toggle
         label="Grid align"

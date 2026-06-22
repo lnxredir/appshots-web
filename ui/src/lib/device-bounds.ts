@@ -77,3 +77,36 @@ export function defaultDevicePlacement(
 
   return { x, y, width: widthScale, rotation: 0 };
 }
+
+export type DeviceAlignH = 'left' | 'center' | 'right';
+export type DeviceAlignV = 'top' | 'middle' | 'bottom';
+
+/** Align a phone frame on the wide seamless canvas (x = wide ratio, y = panel-height ratio). */
+export function applyWideDeviceAlign(
+  placement: { x: number; y: number; width: number; rotation: number },
+  alignH: DeviceAlignH | null,
+  alignV: DeviceAlignV | null,
+  device: DeviceInfo,
+  panelCount: number,
+  orientation: 'portrait' | 'landscape',
+): { x: number; y: number; width: number; rotation: number } {
+  const panelW = orientation === 'portrait' ? device.width : device.height;
+  const panelH = orientation === 'portrait' ? device.height : device.width;
+  const wideW = panelW * panelCount;
+  const { phoneW, phoneH } = getPhoneDimensions(device, panelW, placement.width, orientation);
+  const phoneWRatio = phoneW / wideW;
+  const phoneHRatio = phoneH / panelH;
+  const margin = 0.04;
+
+  let { x, y } = placement;
+
+  if (alignH === 'left') x = margin;
+  else if (alignH === 'center') x = (1 - phoneWRatio) / 2;
+  else if (alignH === 'right') x = 1 - phoneWRatio - margin;
+
+  if (alignV === 'top') y = margin;
+  else if (alignV === 'middle') y = (1 - phoneHRatio) / 2;
+  else if (alignV === 'bottom') y = 1 - phoneHRatio - margin;
+
+  return { ...placement, x, y };
+}

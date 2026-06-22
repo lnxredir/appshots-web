@@ -1,10 +1,16 @@
 import { useRef } from 'react';
 import type { DeviceInfo, DevicePlacement } from '../types';
-import { defaultDevicePlacement } from '../lib/device-bounds';
+import { applyWideDeviceAlign, defaultDevicePlacement } from '../lib/device-bounds';
+import { PlacementAlignButtons } from './PlacementAlignButtons';
 
 interface DevicePlacementControlsProps {
   devices: DevicePlacement[];
   selectedId: string | null;
+  deviceInfo: DeviceInfo;
+  panelCount: number;
+  orientation: 'portrait' | 'landscape';
+  gridAlign?: boolean;
+  onGridAlignChange?: (gridAlign: boolean) => void;
   onAdd: (files: FileList) => void;
   onUpdate: (id: string, patch: Partial<DevicePlacement>) => void;
   onRemove: (id: string) => void;
@@ -35,9 +41,41 @@ export async function loadDeviceFromFile(
   };
 }
 
+function Toggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-panel px-3 py-2.5 transition hover:bg-panel-hover">
+      <span className="text-sm">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 rounded-full transition ${checked ? 'bg-accent' : 'bg-border'}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition ${checked ? 'translate-x-5' : ''}`}
+        />
+      </button>
+    </label>
+  );
+}
+
 export function DevicePlacementControls({
   devices,
   selectedId,
+  deviceInfo,
+  panelCount,
+  orientation,
+  gridAlign = false,
+  onGridAlignChange,
   onAdd,
   onUpdate,
   onRemove,
@@ -125,6 +163,39 @@ export function DevicePlacementControls({
 
                 {selected && (
                   <div className="mt-3 space-y-3 border-t border-border pt-3">
+                    <PlacementAlignButtons
+                      onAlignH={(align) => {
+                        const next = applyWideDeviceAlign(
+                          device,
+                          align,
+                          null,
+                          deviceInfo,
+                          panelCount,
+                          orientation,
+                        );
+                        onUpdate(device.id, { x: next.x, y: next.y });
+                      }}
+                      onAlignV={(align) => {
+                        const next = applyWideDeviceAlign(
+                          device,
+                          null,
+                          align,
+                          deviceInfo,
+                          panelCount,
+                          orientation,
+                        );
+                        onUpdate(device.id, { x: next.x, y: next.y });
+                      }}
+                    />
+
+                    {onGridAlignChange && (
+                      <Toggle
+                        label="Grid align"
+                        checked={gridAlign}
+                        onChange={onGridAlignChange}
+                      />
+                    )}
+
                     <div>
                       <label className="mb-1.5 flex justify-between text-xs font-medium text-muted">
                         <span>Size</span>

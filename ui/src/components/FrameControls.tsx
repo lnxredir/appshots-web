@@ -5,7 +5,6 @@ import { CustomFontControls } from './CustomFontControls';
 import { IconControls } from './IconControls';
 import { StickerControls } from './StickerControls';
 import { TextStylingSection } from './TextStylingSection';
-import { ScreenshotPlacementControls } from './ScreenshotPlacementControls';
 import type { CustomFont, DeviceInfo, Sticker } from '../types';
 import type { IconPackId } from '../lib/icons';
 
@@ -15,8 +14,6 @@ interface FrameControlsProps {
   customFonts: CustomFont[];
   stickers: Sticker[];
   selectedStickerId: string | null;
-  screenshotDevice?: DeviceInfo;
-  showScreenshotPlacement?: boolean;
   onCustomFontsAdd: (files: FileList) => void;
   onCustomFontRemove: (id: string) => void;
   onStickersAdd: (files: FileList) => void;
@@ -25,8 +22,6 @@ interface FrameControlsProps {
   onStickerSelect: (id: string | null) => void;
   onStickerInteractionStart?: () => void;
   onStickerInteractionEnd?: () => void;
-  onScreenshotInteractionStart?: () => void;
-  onScreenshotInteractionEnd?: () => void;
   onAddIcon: (iconName: string, pack: IconPackId, color: string) => void;
   onChange: (settings: FrameSettings) => void;
 }
@@ -73,8 +68,6 @@ export function FrameControls({
   customFonts,
   stickers,
   selectedStickerId,
-  screenshotDevice,
-  showScreenshotPlacement = false,
   onCustomFontsAdd,
   onCustomFontRemove,
   onStickersAdd,
@@ -83,8 +76,6 @@ export function FrameControls({
   onStickerSelect,
   onStickerInteractionStart,
   onStickerInteractionEnd,
-  onScreenshotInteractionStart,
-  onScreenshotInteractionEnd,
   onAddIcon,
   onChange,
 }: FrameControlsProps) {
@@ -178,17 +169,6 @@ export function FrameControls({
               onOptionsChange={updateOptions}
             />
           </div>
-
-          {showScreenshotPlacement && screenshotDevice && (
-            <ScreenshotPlacementControls
-              settings={settings}
-              device={screenshotDevice}
-              collapsible
-              onOptionsChange={updateOptions}
-              onInteractionStart={onScreenshotInteractionStart}
-              onInteractionEnd={onScreenshotInteractionEnd}
-            />
-          )}
         </Section>
       )}
 
