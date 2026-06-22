@@ -1,6 +1,6 @@
 {
   "name": "appshots-web",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Generate App Store-ready screenshots in your browser — frame, style, and export with a self-hosted web studio.",
   "type": "module",
   "main": "./dist/index.js",

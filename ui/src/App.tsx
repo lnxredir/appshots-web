@@ -8,7 +8,6 @@ import { FrameControls } from './components/FrameControls';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ModeSelector } from './components/ModeSelector';
 import { PreviewPanel } from './components/PreviewPanel';
-import { ScreenshotPlacementControls } from './components/ScreenshotPlacementControls';
 import { SeamlessPanelEditor } from './components/SeamlessPanelEditor';
 import { SeamlessPreviewPanel } from './components/SeamlessPreviewPanel';
 import type { DraggableElement } from './components/SeamlessPreviewPanel';
@@ -697,26 +696,14 @@ export default function App() {
             </>
           )}
 
-          {!isSeamless && file && selectedDevice && (
-            <div className="mb-6">
-              <ScreenshotPlacementControls
-                settings={settings}
-                device={selectedDevice}
-                onOptionsChange={(patch) =>
-                  setSettings((prev) => ({ ...prev, options: { ...prev.options, ...patch } }))
-                }
-                onInteractionStart={holdPreview}
-                onInteractionEnd={releasePreview}
-              />
-            </div>
-          )}
-
           <FrameControls
             devices={devices}
             settings={settings}
             customFonts={customFonts}
             stickers={stickers}
             selectedStickerId={selectedStickerId}
+            screenshotDevice={selectedDevice}
+            showScreenshotPlacement={!isSeamless && !!file && !!selectedDevice}
             onCustomFontsAdd={handleAddCustomFonts}
             onCustomFontRemove={handleRemoveCustomFont}
             onStickersAdd={handleAddStickers}
@@ -727,6 +714,8 @@ export default function App() {
             onStickerSelect={setSelectedStickerId}
             onStickerInteractionStart={holdPreview}
             onStickerInteractionEnd={releasePreview}
+            onScreenshotInteractionStart={holdPreview}
+            onScreenshotInteractionEnd={releasePreview}
             onAddIcon={handleAddIcon}
             onChange={setSettings}
           />

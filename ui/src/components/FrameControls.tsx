@@ -5,6 +5,7 @@ import { CustomFontControls } from './CustomFontControls';
 import { IconControls } from './IconControls';
 import { StickerControls } from './StickerControls';
 import { TextStylingSection } from './TextStylingSection';
+import { ScreenshotPlacementControls } from './ScreenshotPlacementControls';
 import type { CustomFont, DeviceInfo, Sticker } from '../types';
 import type { IconPackId } from '../lib/icons';
 
@@ -14,6 +15,8 @@ interface FrameControlsProps {
   customFonts: CustomFont[];
   stickers: Sticker[];
   selectedStickerId: string | null;
+  screenshotDevice?: DeviceInfo;
+  showScreenshotPlacement?: boolean;
   onCustomFontsAdd: (files: FileList) => void;
   onCustomFontRemove: (id: string) => void;
   onStickersAdd: (files: FileList) => void;
@@ -22,6 +25,8 @@ interface FrameControlsProps {
   onStickerSelect: (id: string | null) => void;
   onStickerInteractionStart?: () => void;
   onStickerInteractionEnd?: () => void;
+  onScreenshotInteractionStart?: () => void;
+  onScreenshotInteractionEnd?: () => void;
   onAddIcon: (iconName: string, pack: IconPackId, color: string) => void;
   onChange: (settings: FrameSettings) => void;
 }
@@ -68,6 +73,8 @@ export function FrameControls({
   customFonts,
   stickers,
   selectedStickerId,
+  screenshotDevice,
+  showScreenshotPlacement = false,
   onCustomFontsAdd,
   onCustomFontRemove,
   onStickersAdd,
@@ -76,6 +83,8 @@ export function FrameControls({
   onStickerSelect,
   onStickerInteractionStart,
   onStickerInteractionEnd,
+  onScreenshotInteractionStart,
+  onScreenshotInteractionEnd,
   onAddIcon,
   onChange,
 }: FrameControlsProps) {
@@ -122,44 +131,8 @@ export function FrameControls({
       </Section>
 
       {settings.mode === 'single' && (
-      <Section title="Text overlay">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted">Title</label>
-          <input
-            type="text"
-            value={settings.title}
-            onChange={(e) => update({ title: e.target.value })}
-            placeholder="Your App Name"
-            className="w-full rounded-lg border border-border bg-panel px-3 py-2.5 text-sm outline-none transition focus:border-accent"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted">Subtitle</label>
-          <input
-            type="text"
-            value={settings.subtitle}
-            onChange={(e) => update({ subtitle: e.target.value })}
-            placeholder="Your tagline here"
-            className="w-full rounded-lg border border-border bg-panel px-3 py-2.5 text-sm outline-none transition focus:border-accent"
-          />
-        </div>
-      </Section>
-      )}
-
-      {settings.mode === 'single' && (
-      <Section title="Text styling">
-        <TextStylingSection
-          title={settings.title}
-          subtitle={settings.subtitle}
-          options={settings.options}
-          customFonts={customFonts}
-          panelWidth={panelWidth}
-          panelHeight={panelHeight}
-          collapsible={false}
-          onOptionsChange={updateOptions}
-        />
-
-        <CustomFontControls fonts={customFonts} onAdd={onCustomFontsAdd} onRemove={onCustomFontRemove} />
+        <Section title="Text">
+          <CustomFontControls fonts={customFonts} onAdd={onCustomFontsAdd} onRemove={onCustomFontRemove} />
 
           <StickerControls
             stickers={stickers}
@@ -173,7 +146,50 @@ export function FrameControls({
           />
 
           <IconControls onAddIcon={onAddIcon} />
-      </Section>
+
+          <div className="rounded-xl border border-border bg-panel p-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted">Title</label>
+              <input
+                type="text"
+                value={settings.title}
+                onChange={(e) => update({ title: e.target.value })}
+                placeholder="Your App Name"
+                className="mb-2 w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted">Subtitle</label>
+              <input
+                type="text"
+                value={settings.subtitle}
+                onChange={(e) => update({ subtitle: e.target.value })}
+                placeholder="Your tagline here"
+                className="w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
+              />
+            </div>
+            <TextStylingSection
+              title={settings.title}
+              subtitle={settings.subtitle}
+              options={settings.options}
+              customFonts={customFonts}
+              panelWidth={panelWidth}
+              panelHeight={panelHeight}
+              onOptionsChange={updateOptions}
+            />
+          </div>
+
+          {showScreenshotPlacement && screenshotDevice && (
+            <ScreenshotPlacementControls
+              settings={settings}
+              device={screenshotDevice}
+              collapsible
+              onOptionsChange={updateOptions}
+              onInteractionStart={onScreenshotInteractionStart}
+              onInteractionEnd={onScreenshotInteractionEnd}
+            />
+          )}
+        </Section>
       )}
 
       <Section title="Background">

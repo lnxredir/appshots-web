@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DeviceInfo, FrameSettings } from '../types';
 import {
   applyScreenshotAlign,
@@ -13,6 +14,7 @@ interface ScreenshotPlacementControlsProps {
   onOptionsChange: (patch: Partial<FrameSettings['options']>) => void;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
+  collapsible?: boolean;
 }
 
 function Toggle({
@@ -48,7 +50,10 @@ export function ScreenshotPlacementControls({
   onOptionsChange,
   onInteractionStart,
   onInteractionEnd,
+  collapsible = false,
 }: ScreenshotPlacementControlsProps) {
+  const [expanded, setExpanded] = useState(!collapsible);
+
   if (!device) return null;
 
   const placement = placementFromOptions(
@@ -70,9 +75,8 @@ export function ScreenshotPlacementControls({
     onOptionsChange(placementToPatch(next));
   };
 
-  return (
-    <section className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Screenshot placement</h3>
+  const content = (
+    <div className="space-y-3">
       <p className="text-xs leading-relaxed text-muted">
         Drag the phone in the preview, or use alignment and size controls below.
       </p>
@@ -85,7 +89,7 @@ export function ScreenshotPlacementControls({
               key={align}
               type="button"
               onClick={() => applyAlign(align, null)}
-              className="rounded-lg border border-border bg-panel px-2 py-2 text-xs capitalize transition hover:bg-panel-hover"
+              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-2 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
             >
               {align}
             </button>
@@ -101,7 +105,7 @@ export function ScreenshotPlacementControls({
               key={align}
               type="button"
               onClick={() => applyAlign(null, align)}
-              className="rounded-lg border border-border bg-panel px-2 py-2 text-xs capitalize transition hover:bg-panel-hover"
+              className="rounded-lg border border-border bg-[#0e0e14] px-2 py-2 text-xs capitalize transition hover:bg-panel-hover hover:text-white"
             >
               {align}
             </button>
@@ -132,7 +136,7 @@ export function ScreenshotPlacementControls({
           onInput={(e) =>
             onOptionsChange({ screenshotWidth: parseFloat(e.currentTarget.value) })
           }
-          className="w-full"
+          className="w-full accent-accent"
         />
       </div>
 
@@ -155,9 +159,43 @@ export function ScreenshotPlacementControls({
           onInput={(e) =>
             onOptionsChange({ screenshotRotation: parseInt(e.currentTarget.value, 10) })
           }
-          className="w-full"
+          className="w-full accent-accent"
         />
       </div>
-    </section>
+    </div>
+  );
+
+  if (!collapsible) {
+    return (
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Screenshot placement</h3>
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-panel p-3">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between text-left text-xs font-medium text-muted transition hover:text-white"
+        aria-expanded={expanded}
+      >
+        <span>Screenshot placement</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className={`shrink-0 transition ${expanded ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {expanded && <div className="mt-3 border-t border-border pt-3">{content}</div>}
+    </div>
   );
 }
