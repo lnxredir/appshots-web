@@ -85,6 +85,37 @@ export function SeamlessPanelEditor({
     <section className="space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Panels</h3>
 
+      <div className="space-y-2">
+        {Array.from({ length: panelCount }, (_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-panel p-3">
+            <p className="mb-2 text-xs font-medium text-muted">Panel {i + 1}</p>
+            <input
+              type="text"
+              value={panels[i]?.title ?? ''}
+              onChange={(e) => onPanelChange(i, { title: e.target.value })}
+              placeholder="Title"
+              className="mb-2 w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
+            />
+            <input
+              type="text"
+              value={panels[i]?.subtitle ?? ''}
+              onChange={(e) => onPanelChange(i, { subtitle: e.target.value })}
+              placeholder="Subtitle"
+              className="w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
+            />
+            <PanelStyleSection
+              panel={panels[i] ?? { title: '', subtitle: '' }}
+              index={i}
+              globalOptions={globalOptions}
+              customFonts={customFonts}
+              panelWidth={panelWidth}
+              panelHeight={panelHeight}
+              onPanelChange={onPanelChange}
+            />
+          </div>
+        ))}
+      </div>
+
       <div>
         <label className="mb-1.5 block text-xs font-medium text-muted">Panel count</label>
         <div className="grid grid-cols-4 gap-2">
@@ -119,37 +150,6 @@ export function SeamlessPanelEditor({
       />
 
       <IconControls onAddIcon={onAddIcon} />
-
-      <div className="space-y-2">
-        {Array.from({ length: panelCount }, (_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-panel p-3">
-            <p className="mb-2 text-xs font-medium text-muted">Panel {i + 1}</p>
-            <input
-              type="text"
-              value={panels[i]?.title ?? ''}
-              onChange={(e) => onPanelChange(i, { title: e.target.value })}
-              placeholder="Title"
-              className="mb-2 w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
-            />
-            <input
-              type="text"
-              value={panels[i]?.subtitle ?? ''}
-              onChange={(e) => onPanelChange(i, { subtitle: e.target.value })}
-              placeholder="Subtitle"
-              className="w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
-            />
-            <PanelStyleSection
-              panel={panels[i] ?? { title: '', subtitle: '' }}
-              index={i}
-              globalOptions={globalOptions}
-              customFonts={customFonts}
-              panelWidth={panelWidth}
-              panelHeight={panelHeight}
-              onPanelChange={onPanelChange}
-            />
-          </div>
-        ))}
-      </div>
     </section>
   );
 }

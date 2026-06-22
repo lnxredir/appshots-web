@@ -645,6 +645,30 @@ export default function App() {
           {isSeamless && (
             <>
               <div className="mb-6">
+                <DevicePlacementControls
+                  devices={devicePlacements}
+                  selectedId={selectedDeviceId}
+                  onAdd={handleAddDevices}
+                  onInteractionStart={holdPreview}
+                  onInteractionEnd={releasePreview}
+                  onUpdate={(id, patch) =>
+                    setDevicePlacements((prev) =>
+                      prev.map((d) => (d.id === id ? { ...d, ...patch } : d)),
+                    )
+                  }
+                  onRemove={(id) => {
+                    setDevicePlacements((prev) => {
+                      const removed = prev.find((d) => d.id === id);
+                      if (removed) URL.revokeObjectURL(removed.url);
+                      return prev.filter((d) => d.id !== id);
+                    });
+                    cachedUploadFieldsRef.current.delete(`device_${id}`);
+                    if (selectedDeviceId === id) setSelectedDeviceId(null);
+                  }}
+                  onSelect={setSelectedDeviceId}
+                />
+              </div>
+              <div className="mb-6">
                 <SeamlessPanelEditor
                   panelCount={settings.panelCount}
                   panelWidth={canvasSize.width}
@@ -667,30 +691,6 @@ export default function App() {
                   onAddIcon={handleAddIcon}
                   onPanelCountChange={handlePanelCountChange}
                   onPanelChange={handlePanelChange}
-                />
-              </div>
-              <div className="mb-6">
-                <DevicePlacementControls
-                  devices={devicePlacements}
-                  selectedId={selectedDeviceId}
-                  onAdd={handleAddDevices}
-                  onInteractionStart={holdPreview}
-                  onInteractionEnd={releasePreview}
-                  onUpdate={(id, patch) =>
-                    setDevicePlacements((prev) =>
-                      prev.map((d) => (d.id === id ? { ...d, ...patch } : d)),
-                    )
-                  }
-                  onRemove={(id) => {
-                    setDevicePlacements((prev) => {
-                      const removed = prev.find((d) => d.id === id);
-                      if (removed) URL.revokeObjectURL(removed.url);
-                      return prev.filter((d) => d.id !== id);
-                    });
-                    cachedUploadFieldsRef.current.delete(`device_${id}`);
-                    if (selectedDeviceId === id) setSelectedDeviceId(null);
-                  }}
-                  onSelect={setSelectedDeviceId}
                 />
               </div>
             </>
