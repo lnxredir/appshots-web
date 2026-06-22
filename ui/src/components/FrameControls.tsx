@@ -125,19 +125,6 @@ export function FrameControls({
         <Section title="Text">
           <CustomFontControls fonts={customFonts} onAdd={onCustomFontsAdd} onRemove={onCustomFontRemove} />
 
-          <StickerControls
-            stickers={stickers}
-            selectedId={selectedStickerId}
-            onAdd={onStickersAdd}
-            onUpdate={onStickerUpdate}
-            onRemove={onStickerRemove}
-            onSelect={onStickerSelect}
-            onInteractionStart={onStickerInteractionStart}
-            onInteractionEnd={onStickerInteractionEnd}
-          />
-
-          <IconControls onAddIcon={onAddIcon} />
-
           <div className="rounded-xl border border-border bg-panel p-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted">Title</label>
@@ -169,6 +156,19 @@ export function FrameControls({
               onOptionsChange={updateOptions}
             />
           </div>
+
+          <StickerControls
+            stickers={stickers}
+            selectedId={selectedStickerId}
+            onAdd={onStickersAdd}
+            onUpdate={onStickerUpdate}
+            onRemove={onStickerRemove}
+            onSelect={onStickerSelect}
+            onInteractionStart={onStickerInteractionStart}
+            onInteractionEnd={onStickerInteractionEnd}
+          />
+
+          <IconControls onAddIcon={onAddIcon} />
         </Section>
       )}
 
