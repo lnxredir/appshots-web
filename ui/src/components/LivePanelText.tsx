@@ -1,4 +1,7 @@
-import { resolveFontCss } from '../lib/custom-fonts';
+import {
+  buildPanelTextBlockStyle,
+  formatPanelTextContent,
+} from '../lib/panel-text-styles';
 import {
   panelEffectiveOptions,
   resolveTextAlignH,
@@ -25,10 +28,6 @@ interface LivePanelTextProps {
   onClick: (e: React.MouseEvent, id: string) => void;
 }
 
-function formatContent(text: string, uppercase?: boolean): string {
-  return uppercase ? text.toUpperCase() : text;
-}
-
 function textStyle(
   role: 'title' | 'subtitle',
   opts: Partial<FrameOptions>,
@@ -36,37 +35,7 @@ function textStyle(
   fontSize: number,
   alignH: 'left' | 'center' | 'right',
 ): React.CSSProperties {
-  const isTitle = role === 'title';
-  const font = (isTitle ? opts.titleFont : opts.subtitleFont) ?? 'Inter';
-  const color = (isTitle ? opts.titleColor : opts.subtitleColor) ?? '#ffffff';
-  const bold = isTitle ? opts.titleBold : opts.subtitleBold;
-  const italic = isTitle ? opts.titleItalic : opts.subtitleItalic;
-  const underline = isTitle ? opts.titleUnderline : opts.subtitleUnderline;
-  const strikethrough = isTitle ? opts.titleStrikethrough : opts.subtitleStrikethrough;
-  const uppercase = isTitle ? opts.titleUppercase : opts.subtitleUppercase;
-  const shadow = isTitle ? opts.titleShadow : opts.subtitleShadow;
-  const spacingRatio = isTitle
-    ? (opts.titleLetterSpacing ?? 0.08)
-    : (opts.subtitleLetterSpacing ?? 0.01);
-
-  const decorations: string[] = [];
-  if (underline) decorations.push('underline');
-  if (strikethrough) decorations.push('line-through');
-
-  return {
-    fontFamily: resolveFontCss(font, customFonts),
-    fontSize,
-    fontWeight: bold ? (isTitle ? 800 : 600) : isTitle ? 500 : 400,
-    fontStyle: italic ? 'italic' : 'normal',
-    color,
-    letterSpacing: fontSize * spacingRatio,
-    textTransform: uppercase ? 'uppercase' : 'none',
-    textDecoration: decorations.length ? decorations.join(' ') : 'none',
-    textShadow: shadow ? '0 3px 10px rgba(0,0,0,0.5)' : undefined,
-    lineHeight: isTitle ? 1.15 : 1.2,
-    whiteSpace: 'pre-line',
-    textAlign: alignH,
-  };
+  return buildPanelTextBlockStyle(role, opts, customFonts, fontSize, alignH);
 }
 
 function TextBlock({
@@ -166,7 +135,7 @@ export function LivePanelText({
         <TextBlock
           id={textElementId(panelIndex, 'title')}
           role="title"
-          content={formatContent(panel.title, opts.titleUppercase)}
+          content={formatPanelTextContent(panel.title, opts.titleUppercase)}
           anchorX={positions.titleX}
           anchorY={positions.titleY}
           panelIndex={panelIndex}
@@ -188,7 +157,7 @@ export function LivePanelText({
         <TextBlock
           id={textElementId(panelIndex, 'subtitle')}
           role="subtitle"
-          content={formatContent(panel.subtitle, opts.subtitleUppercase)}
+          content={formatPanelTextContent(panel.subtitle, opts.subtitleUppercase)}
           anchorX={positions.subtitleX}
           anchorY={positions.subtitleY}
           panelIndex={panelIndex}
