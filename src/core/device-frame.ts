@@ -150,83 +150,63 @@ export async function buildDeviceLayers(
     .png()
     .toBuffer();
 
-  const phoneSvg = `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-    <rect x="${phoneX}" y="${phoneY}" width="${phoneW}" height="${phoneH}"
+  // Pack shadow, frame, screen, and overlays into one buffer so clipping never desyncs layers.
+  const margin = Math.ceil(Math.max(phoneW, phoneH) * (angle !== 0 ? 0.6 : 0.2));
+  const localW = phoneW + margin * 2;
+  const localH = phoneH + margin * 2;
+  const lx = margin;
+  const ly = margin;
+
+  const localShadow = opts.shadow
+    ? await buildPhoneShadow(localW, localH, lx, ly, phoneW, phoneH, bodyRadius)
+    : null;
+
+  const localPhoneSvg = `<svg width="${localW}" height="${localH}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="${lx}" y="${ly}" width="${phoneW}" height="${phoneH}"
       rx="${bodyRadius}" ry="${bodyRadius}"
       fill="${bodyColor}" stroke="${ringColor}" stroke-width="${ringWidth}"/>
   </svg>`;
 
-  const overlaysSvg = buildPhoneOverlaysSvg(
-    canvasW, canvasH, phoneX, phoneY, phoneW, phoneH, bezel, fc,
+  const localOverlaysSvg = buildPhoneOverlaysSvg(
+    localW, localH, lx, ly, phoneW, phoneH, bezel, fc,
   );
 
-  const layers: sharp.OverlayOptions[] = [];
+  const localLayers: sharp.OverlayOptions[] = [];
+  if (localShadow) localLayers.push({ input: localShadow, top: 0, left: 0 });
+  localLayers.push({ input: Buffer.from(localPhoneSvg), top: 0, left: 0 });
+  localLayers.push({ input: maskedScreen, top: ly + bezel, left: lx + bezel });
+  localLayers.push({ input: Buffer.from(localOverlaysSvg), top: 0, left: 0 });
+
+  const localBg = await sharp({
+    create: {
+      width: localW,
+      height: localH,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .png()
+    .toBuffer();
+
+  let deviceBuffer = await sharp(localBg).composite(localLayers).png().toBuffer();
+
+  let left = phoneX - margin;
+  let top = phoneY - margin;
 
   if (angle !== 0) {
-    const margin = Math.ceil(Math.max(phoneW, phoneH) * 0.6);
-    const localW = phoneW + margin * 2;
-    const localH = phoneH + margin * 2;
-    const lx = margin;
-    const ly = margin;
-
-    const localShadow = opts.shadow
-      ? await buildPhoneShadow(localW, localH, lx, ly, phoneW, phoneH, bodyRadius)
-      : null;
-
-    const localPhoneSvg = `<svg width="${localW}" height="${localH}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="${lx}" y="${ly}" width="${phoneW}" height="${phoneH}"
-        rx="${bodyRadius}" ry="${bodyRadius}"
-        fill="${bodyColor}" stroke="${ringColor}" stroke-width="${ringWidth}"/>
-    </svg>`;
-
-    const localOverlaysSvg = buildPhoneOverlaysSvg(
-      localW, localH, lx, ly, phoneW, phoneH, bezel, fc,
-    );
-
-    const localLayers: sharp.OverlayOptions[] = [];
-    if (localShadow) localLayers.push({ input: localShadow, top: 0, left: 0 });
-    localLayers.push({ input: Buffer.from(localPhoneSvg), top: 0, left: 0 });
-    localLayers.push({ input: maskedScreen, top: ly + bezel, left: lx + bezel });
-    localLayers.push({ input: Buffer.from(localOverlaysSvg), top: 0, left: 0 });
-
-    const localBg = await sharp({
-      create: {
-        width: localW,
-        height: localH,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      },
-    })
-      .png()
-      .toBuffer();
-
-    const rotated = await sharp(localBg)
-      .composite(localLayers)
+    deviceBuffer = await sharp(deviceBuffer)
       .rotate(angle, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
 
-    const meta = await sharp(rotated).metadata();
+    const meta = await sharp(deviceBuffer).metadata();
     const rotW = meta.width ?? localW;
     const rotH = meta.height ?? localH;
     const centerX = phoneX + phoneW / 2;
     const centerY = phoneY + phoneH / 2;
-
-    return [{
-      input: rotated,
-      left: Math.round(centerX - rotW / 2),
-      top: Math.round(centerY - rotH / 2),
-    }];
+    left = Math.round(centerX - rotW / 2);
+    top = Math.round(centerY - rotH / 2);
   }
 
-  if (opts.shadow) {
-    const shadowBuf = await buildPhoneShadow(canvasW, canvasH, phoneX, phoneY, phoneW, phoneH, bodyRadius);
-    layers.push({ input: shadowBuf, top: 0, left: 0 });
-  }
-
-  layers.push({ input: Buffer.from(phoneSvg), top: 0, left: 0 });
-  layers.push({ input: maskedScreen, top: phoneY + bezel, left: phoneX + bezel });
-  layers.push({ input: Buffer.from(overlaysSvg), top: 0, left: 0 });
-
-  return layers;
+  return [{ input: deviceBuffer, left, top }];
 }

@@ -1,6 +1,7 @@
+import { drawSeamlessPanelTextOnCanvas } from './canvas-panel-text';
 import { getPhoneFrameMetrics } from './device-bounds';
 import { resolveFrameColor, type DeviceFrameOptions } from './frame-colors';
-import type { DeviceInfo, DevicePlacement } from '../types';
+import type { CustomFont, DeviceInfo, DevicePlacement, FrameOptions, SeamlessPanelConfig } from '../types';
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -38,7 +39,7 @@ function roundRectPath(
   ctx.closePath();
 }
 
-async function drawDeviceFrame(
+export async function drawDeviceFrame(
   ctx: CanvasRenderingContext2D,
   placement: DevicePlacement,
   device: DeviceInfo,
@@ -120,7 +121,7 @@ async function drawDeviceFrame(
   ctx.restore();
 }
 
-/** Composite client-side device frames onto the server background — matches live preview. */
+/** Composite client-side device frames and text onto the server background — matches live preview. */
 export async function exportSeamlessPanels(params: {
   wideBackgroundBlob: Blob;
   devicePlacements: DevicePlacement[];
@@ -130,6 +131,9 @@ export async function exportSeamlessPanels(params: {
   panelWidth: number;
   panelHeight: number;
   frameOptions: DeviceFrameOptions;
+  panels: SeamlessPanelConfig[];
+  globalOptions: Partial<FrameOptions>;
+  customFonts: CustomFont[];
 }): Promise<Blob[]> {
   const {
     wideBackgroundBlob,
@@ -140,6 +144,9 @@ export async function exportSeamlessPanels(params: {
     panelWidth,
     panelHeight,
     frameOptions,
+    panels,
+    globalOptions,
+    customFonts,
   } = params;
 
   const wideW = panelWidth * panelCount;
@@ -169,7 +176,17 @@ export async function exportSeamlessPanels(params: {
       );
     }
 
-    const panels: Blob[] = [];
+    await drawSeamlessPanelTextOnCanvas(
+      ctx,
+      panelCount,
+      panelWidth,
+      panelHeight,
+      panels,
+      globalOptions,
+      customFonts,
+    );
+
+    const panelBlobs: Blob[] = [];
     for (let i = 0; i < panelCount; i++) {
       const panelCanvas = document.createElement('canvas');
       panelCanvas.width = panelWidth;
@@ -187,10 +204,10 @@ export async function exportSeamlessPanels(params: {
         panelWidth,
         panelHeight,
       );
-      panels.push(await canvasToBlob(panelCanvas));
+      panelBlobs.push(await canvasToBlob(panelCanvas));
     }
 
-    return panels;
+    return panelBlobs;
   } finally {
     URL.revokeObjectURL(bgUrl);
   }

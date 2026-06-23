@@ -17,6 +17,8 @@ import { useDebounce } from './hooks/useDebounce';
 import { usePreviewHold } from './hooks/usePreviewHold';
 import { fetchDevices, frameImage, frameSeamlessImage, markSeamlessUploadsCached, SEAMLESS_PREVIEW_SCALE } from './lib/api';
 import { exportSeamlessPanels } from './lib/seamless-export';
+import { exportSingleImage } from './lib/single-export';
+import { placementFromOptions } from './lib/screenshot-placement';
 import { APP_VERSION } from './lib/version';
 import { injectCustomFonts } from './lib/custom-fonts';
 import { createIconSticker, type IconPackId } from './lib/icons';
@@ -433,11 +435,41 @@ export default function App() {
   );
 
   const handleDownload = async () => {
-    if (!file) return;
+    if (!file || !selectedDevice || !screenshotUrl) return;
     setDownloading(true);
     setError(null);
     try {
-      const blob = await frameImage(file, settings, stickers, customFonts, { includeDevice: true });
+      const placement = placementFromOptions(
+        settings.options,
+        selectedDevice,
+        settings.orientation,
+        settings.options.textPosition ?? 'bottom',
+      );
+      const bgBlob = await frameImage(file, settings, stickers, customFonts, {
+        includeDevice: false,
+        includeText: false,
+      });
+      const blob = await exportSingleImage({
+        backgroundBlob: bgBlob,
+        placement: {
+          id: 'screenshot',
+          file,
+          url: screenshotUrl,
+          name: file.name,
+          x: placement.x,
+          y: placement.y,
+          width: placement.width,
+          rotation: placement.rotation,
+        },
+        device: selectedDevice,
+        orientation: settings.orientation,
+        panelWidth: canvasSize.width,
+        panelHeight: canvasSize.height,
+        title: settings.title,
+        subtitle: settings.subtitle,
+        options: settings.options,
+        customFonts,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -464,7 +496,7 @@ export default function App() {
         {
           previewScale: 1,
           includeDevices: false,
-          includeText: true,
+          includeText: false,
           cachedUploadFields: cachedUploadFieldsRef.current,
         },
       );
@@ -483,6 +515,9 @@ export default function App() {
         panelWidth: canvasSize.width,
         panelHeight: canvasSize.height,
         frameOptions: settings.options,
+        panels: settings.panels,
+        globalOptions: settings.options,
+        customFonts: debouncedCustomFonts,
       });
       panels.forEach((blob, i) => {
         const a = document.createElement('a');
