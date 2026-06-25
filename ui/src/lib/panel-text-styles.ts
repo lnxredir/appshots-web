@@ -49,6 +49,16 @@ export function buildPanelTextBlockStyle(
   };
 }
 
-export function panelTextMaxWidth(panelW: number): number {
-  return panelW * 0.84;
+export const DEFAULT_TEXT_BOX_WIDTH = 0.84;
+
+export function resolveTextBoxWidth(
+  role: 'title' | 'subtitle',
+  opts: Partial<FrameOptions>,
+): number {
+  const value = role === 'title' ? opts.titleBoxWidth : opts.subtitleBoxWidth;
+  return value ?? DEFAULT_TEXT_BOX_WIDTH;
+}
+
+export function panelTextMaxWidth(panelW: number, boxWidthFraction?: number): number {
+  return panelW * (boxWidthFraction ?? DEFAULT_TEXT_BOX_WIDTH);
 }

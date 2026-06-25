@@ -1,10 +1,9 @@
 import type { FrameSettings } from '../types';
 import { FRAME_COLORS, GRADIENT_PRESETS, PATTERNS } from '../types';
 import { DeviceSelect } from './DeviceSelect';
-import { CustomFontControls } from './CustomFontControls';
 import { IconControls } from './IconControls';
+import { SingleTextEditor } from './SingleTextEditor';
 import { StickerControls } from './StickerControls';
-import { TextStylingSection } from './TextStylingSection';
 import type { CustomFont, DeviceInfo, Sticker } from '../types';
 import type { IconPackId } from '../lib/icons';
 
@@ -14,6 +13,8 @@ interface FrameControlsProps {
   customFonts: CustomFont[];
   stickers: Sticker[];
   selectedStickerId: string | null;
+  selectedTextId?: string | null;
+  onTextSelect?: (id: string | null) => void;
   onCustomFontsAdd: (files: FileList) => void;
   onCustomFontRemove: (id: string) => void;
   onStickersAdd: (files: FileList) => void;
@@ -68,6 +69,8 @@ export function FrameControls({
   customFonts,
   stickers,
   selectedStickerId,
+  selectedTextId = null,
+  onTextSelect,
   onCustomFontsAdd,
   onCustomFontRemove,
   onStickersAdd,
@@ -123,39 +126,21 @@ export function FrameControls({
 
       {settings.mode === 'single' && (
         <Section title="Text">
-          <CustomFontControls fonts={customFonts} onAdd={onCustomFontsAdd} onRemove={onCustomFontRemove} />
-
-          <div className="rounded-xl border border-border bg-panel p-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted">Title</label>
-              <input
-                type="text"
-                value={settings.title}
-                onChange={(e) => update({ title: e.target.value })}
-                placeholder="Your App Name"
-                className="mb-2 w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted">Subtitle</label>
-              <input
-                type="text"
-                value={settings.subtitle}
-                onChange={(e) => update({ subtitle: e.target.value })}
-                placeholder="Your tagline here"
-                className="w-full rounded-lg border border-border bg-[#0e0e14] px-3 py-2 text-sm outline-none transition focus:border-accent"
-              />
-            </div>
-            <TextStylingSection
-              title={settings.title}
-              subtitle={settings.subtitle}
-              options={settings.options}
-              customFonts={customFonts}
-              panelWidth={panelWidth}
-              panelHeight={panelHeight}
-              onOptionsChange={updateOptions}
-            />
-          </div>
+          <SingleTextEditor
+            title={settings.title}
+            subtitle={settings.subtitle}
+            options={settings.options}
+            customFonts={customFonts}
+            panelWidth={panelWidth}
+            panelHeight={panelHeight}
+            selectedTextId={selectedTextId}
+            onTitleChange={(title) => update({ title })}
+            onSubtitleChange={(subtitle) => update({ subtitle })}
+            onOptionsChange={updateOptions}
+            onTextSelect={onTextSelect ?? (() => {})}
+            onCustomFontsAdd={onCustomFontsAdd}
+            onCustomFontRemove={onCustomFontRemove}
+          />
 
           <StickerControls
             stickers={stickers}

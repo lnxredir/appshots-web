@@ -1,6 +1,7 @@
 import {
   buildPanelTextBlockStyle,
   formatPanelTextContent,
+  resolveTextBoxWidth,
 } from '../lib/panel-text-styles';
 import {
   panelEffectiveOptions,
@@ -22,10 +23,13 @@ interface LivePanelTextProps {
   wideW: number;
   imageRect: { x: number; y: number; width: number; height: number };
   freePosition: boolean;
+  alwaysInteractive?: boolean;
   selectedId: string | null;
   draggingId: string | null;
+  resizingId?: string | null;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onClick: (e: React.MouseEvent, id: string) => void;
+  onResizePointerDown?: (e: React.PointerEvent, id: string, currentWidth: number) => void;
 }
 
 function textStyle(
@@ -51,11 +55,14 @@ function TextBlock({
   imageRect,
   style,
   alignH,
-  freePosition,
+  boxWidth,
+  interactive,
   selected,
   isDragging,
+  isResizing,
   onPointerDown,
   onClick,
+  onResizePointerDown,
 }: {
   id: string;
   role: 'title' | 'subtitle';
@@ -69,15 +76,18 @@ function TextBlock({
   imageRect: { width: number; height: number };
   style: React.CSSProperties;
   alignH: 'left' | 'center' | 'right';
-  freePosition: boolean;
+  boxWidth: number;
+  interactive: boolean;
   selected: boolean;
   isDragging: boolean;
+  isResizing: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onClick: (e: React.MouseEvent, id: string) => void;
+  onResizePointerDown?: (e: React.PointerEvent, id: string, currentWidth: number) => void;
 }) {
   const scaleX = imageRect.width / wideW;
   const scaleY = imageRect.height / panelHeight;
-  const panelScreenW = panelWidth * scaleX;
+  const boxScreenW = panelWidth * boxWidth * scaleX;
   const anchorScreenX = (panelIndex * panelWidth + anchorX * panelWidth) * scaleX;
   const baselineY = anchorY * panelHeight * scaleY;
   const { transform } = textAnchorTransform(alignH);
@@ -85,23 +95,41 @@ function TextBlock({
   return (
     <div
       className={`absolute touch-none ${
-        freePosition
-          ? `rounded-md border-2 border-dashed px-2 py-0.5 ${
-              selected ? 'border-accent bg-accent/10' : 'border-transparent hover:border-white/25'
-            } ${isDragging ? 'cursor-grabbing' : freePosition ? 'cursor-grab' : ''}`
-          : 'pointer-events-none border-transparent'
+        interactive
+          ? `${isDragging || isResizing ? 'cursor-grabbing' : 'cursor-grab'}`
+          : 'pointer-events-none'
       }`}
       style={{
         left: anchorScreenX,
         top: baselineY,
         transform,
-        maxWidth: panelScreenW * 0.84,
+        width: boxScreenW,
         ...style,
       }}
-      onPointerDown={freePosition ? (e) => onPointerDown(e, id) : undefined}
-      onClick={freePosition ? (e) => onClick(e, id) : undefined}
+      onPointerDown={interactive ? (e) => onPointerDown(e, id) : undefined}
+      onClick={interactive ? (e) => onClick(e, id) : undefined}
     >
-      {content}
+      <div
+        className={`relative h-full w-full ${
+          interactive
+            ? `rounded-md border-2 border-dashed px-1 py-0.5 ${
+                selected ? 'border-accent bg-accent/10' : 'border-transparent hover:border-white/25'
+              }`
+            : ''
+        }`}
+      >
+        {content}
+        {interactive && selected && onResizePointerDown && (
+          <div
+            className="absolute -bottom-1.5 -right-1.5 z-10 h-3.5 w-3.5 cursor-nwse-resize rounded-full border-2 border-accent bg-[#12121a]"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onResizePointerDown(e, id, boxWidth);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -117,10 +145,13 @@ export function LivePanelText({
   wideW,
   imageRect,
   freePosition,
+  alwaysInteractive = false,
   selectedId,
   draggingId,
+  resizingId = null,
   onPointerDown,
   onClick,
+  onResizePointerDown,
 }: LivePanelTextProps) {
   const opts = panelEffectiveOptions(globalOptions, panel);
   const positions = resolveTextPositions(panelWidth, panelHeight, panel, globalOptions);
@@ -128,6 +159,7 @@ export function LivePanelText({
   const subtitleFontSize = panelWidth * (opts.subtitleSize ?? 0.043) * (imageRect.width / wideW);
   const titleAlignH = resolveTextAlignH(opts, positions.titleX);
   const subtitleAlignH = resolveTextAlignH(opts, positions.subtitleX);
+  const interactive = alwaysInteractive || freePosition;
 
   return (
     <>
@@ -144,12 +176,15 @@ export function LivePanelText({
           wideW={wideW}
           imageRect={imageRect}
           alignH={titleAlignH}
+          boxWidth={resolveTextBoxWidth('title', opts)}
           style={textStyle('title', opts, customFonts, titleFontSize, titleAlignH)}
-          freePosition={freePosition}
+          interactive={interactive}
           selected={selectedId === textElementId(panelIndex, 'title')}
           isDragging={draggingId === textElementId(panelIndex, 'title')}
+          isResizing={resizingId === textElementId(panelIndex, 'title')}
           onPointerDown={onPointerDown}
           onClick={onClick}
+          onResizePointerDown={onResizePointerDown}
         />
       ) : null}
 
@@ -166,12 +201,15 @@ export function LivePanelText({
           wideW={wideW}
           imageRect={imageRect}
           alignH={subtitleAlignH}
+          boxWidth={resolveTextBoxWidth('subtitle', opts)}
           style={textStyle('subtitle', opts, customFonts, subtitleFontSize, subtitleAlignH)}
-          freePosition={freePosition}
+          interactive={interactive}
           selected={selectedId === textElementId(panelIndex, 'subtitle')}
           isDragging={draggingId === textElementId(panelIndex, 'subtitle')}
+          isResizing={resizingId === textElementId(panelIndex, 'subtitle')}
           onPointerDown={onPointerDown}
           onClick={onClick}
+          onResizePointerDown={onResizePointerDown}
         />
       ) : null}
     </>
@@ -187,10 +225,13 @@ export function LivePanelTextLayer({
   panelHeight,
   wideW,
   imageRect,
+  alwaysInteractive = false,
   selectedId,
   draggingId,
+  resizingId = null,
   onPointerDown,
   onClick,
+  onResizePointerDown,
 }: {
   panels: SeamlessPanelConfig[];
   panelCount: number;
@@ -200,10 +241,13 @@ export function LivePanelTextLayer({
   panelHeight: number;
   wideW: number;
   imageRect: { x: number; y: number; width: number; height: number };
+  alwaysInteractive?: boolean;
   selectedId: string | null;
   draggingId: string | null;
+  resizingId?: string | null;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onClick: (e: React.MouseEvent, id: string) => void;
+  onResizePointerDown?: (e: React.PointerEvent, id: string, currentWidth: number) => void;
 }) {
   return (
     <>
@@ -224,10 +268,13 @@ export function LivePanelTextLayer({
             wideW={wideW}
             imageRect={imageRect}
             freePosition={freePosition}
+            alwaysInteractive={alwaysInteractive}
             selectedId={selectedId}
             draggingId={draggingId}
+            resizingId={resizingId}
             onPointerDown={onPointerDown}
             onClick={onClick}
+            onResizePointerDown={onResizePointerDown}
           />
         );
       })}

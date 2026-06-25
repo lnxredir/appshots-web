@@ -38,6 +38,7 @@ interface PreviewPanelProps {
   onScreenshotMove: (patch: Partial<FrameSettings['options']>) => void;
   onStickerMove: (id: string, x: number, y: number) => void;
   onTextMove: (id: string, localX: number, localY: number) => void;
+  onTextResize: (id: string, boxWidth: number) => void;
   onStickerResize: (id: string, width: number) => void;
   onStickerLayerChange: (id: string, layer: OverlayLayer) => void;
   onStickerRemove: (id: string) => void;
@@ -73,6 +74,7 @@ export function PreviewPanel({
   onScreenshotMove,
   onStickerMove,
   onTextMove,
+  onTextResize,
   onStickerResize,
   onStickerLayerChange,
   onStickerRemove,
@@ -139,7 +141,11 @@ export function PreviewPanel({
   } = useOverlayResize({
     canvasWidth,
     imageRect,
-    onResize: onStickerResize,
+    maxWidth: 1,
+    onResize: (id, width) => {
+      if (parseTextElementId(id)) onTextResize(id, width);
+      else onStickerResize(id, width);
+    },
     onInteractionStart,
     onInteractionEnd,
   });
@@ -494,10 +500,13 @@ export function PreviewPanel({
                 panelHeight={canvasHeight}
                 wideW={canvasWidth}
                 imageRect={imageRect}
+                alwaysInteractive
                 selectedId={selectedTextId}
                 draggingId={draggingId}
+                resizingId={resizingId}
                 onPointerDown={handleTextPointerDown}
                 onClick={handleTextClick}
+                onResizePointerDown={handleResizePointerDown}
               />
             )}
 
@@ -540,10 +549,8 @@ export function PreviewPanel({
 
       {previewUrl && (
         <p className="mt-2 text-center text-xs text-muted">
-          Drag phone to reposition · sliders for size and rotation · alignment buttons in sidebar
-          {settings.options.freePosition && (settings.title || settings.subtitle)
-            ? ' · drag title/subtitle when free positioning is on'
-            : ''}
+          Drag the phone to reposition · use sidebar sliders for size and rotation
+          {(settings.title || settings.subtitle) ? ' · click and drag text to move, corner handle to resize' : ''}
           {settings.options.textGridAlign ? ' · text snaps to grid' : ''}
           {stickers.length > 0 ? ' · right-click stickers for layer and delete' : ''}
         </p>

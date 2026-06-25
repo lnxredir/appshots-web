@@ -3,6 +3,7 @@ import {
   buildPanelTextBlockStyle,
   formatPanelTextContent,
   panelTextMaxWidth,
+  resolveTextBoxWidth,
 } from './panel-text-styles';
 import {
   panelEffectiveOptions,
@@ -56,7 +57,12 @@ async function drawTextRole(
     isTitle ? options.titleUppercase : options.subtitleUppercase,
   );
   const style = buildPanelTextBlockStyle(role, options, customFonts, fontSize, alignH);
-  const block = await rasterizeTextBlock(formatted, style, panelTextMaxWidth(panelW), customFonts);
+  const block = await rasterizeTextBlock(
+    formatted,
+    style,
+    panelTextMaxWidth(panelW, resolveTextBoxWidth(role, options)),
+    customFonts,
+  );
   if (!block) return;
 
   drawRasterizedBlock(ctx, block, anchorX, anchorY, panelW, panelH, offsetX, alignH);

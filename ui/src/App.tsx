@@ -388,6 +388,41 @@ export default function App() {
     });
   };
 
+  const handleTextResize = (id: string, boxWidth: number) => {
+    const meta = parseTextElementId(id);
+    if (!meta) return;
+    const clamped = Math.min(1, Math.max(0.1, boxWidth));
+
+    if (settings.mode === 'single') {
+      setSettings((prev) => ({
+        ...prev,
+        options: {
+          ...prev.options,
+          freePosition: true,
+          ...(meta.role === 'title'
+            ? { titleBoxWidth: clamped }
+            : { subtitleBoxWidth: clamped }),
+        },
+      }));
+      return;
+    }
+
+    setSettings((prev) => {
+      const panels = [...prev.panels];
+      const panel = panels[meta.panelIndex];
+      if (!panel) return prev;
+      const style = {
+        ...panel.style,
+        freePosition: true,
+        ...(meta.role === 'title'
+          ? { titleBoxWidth: clamped }
+          : { subtitleBoxWidth: clamped }),
+      };
+      panels[meta.panelIndex] = { ...panel, style };
+      return { ...prev, panels };
+    });
+  };
+
   const handleSeamlessElementSelect = (id: string | null) => {
     if (!id) {
       setSelectedDeviceId(null);
@@ -762,6 +797,8 @@ export default function App() {
             customFonts={customFonts}
             stickers={stickers}
             selectedStickerId={selectedStickerId}
+            selectedTextId={selectedTextId}
+            onTextSelect={setSelectedTextId}
             onCustomFontsAdd={handleAddCustomFonts}
             onCustomFontRemove={handleRemoveCustomFont}
             onStickersAdd={handleAddStickers}
@@ -834,7 +871,10 @@ export default function App() {
                 setStickers((prev) => prev.map((s) => (s.id === id ? { ...s, x, y } : s)))
               }
               onTextMove={handleTextMove}
-              onStickerResize={handleStickerResize}
+              onTextResize={handleTextResize}
+              onStickerResize={(id, width) =>
+                handleStickerResize(id, Math.min(0.6, Math.max(0.03, width)))
+              }
               onStickerLayerChange={handleStickerLayerChange}
               onStickerRemove={handleStickerRemove}
               onStickerSelect={(id) => {

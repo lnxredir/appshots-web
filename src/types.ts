@@ -67,6 +67,8 @@ export const frameOptionsSchema = z.object({
   titleY: z.number().min(0).max(1).optional(),
   subtitleX: z.number().min(0).max(1).optional(),
   subtitleY: z.number().min(0).max(1).optional(),
+  titleBoxWidth: z.number().min(0.1).max(1).optional(),
+  subtitleBoxWidth: z.number().min(0.1).max(1).optional(),
   /** Top-left X ratio of canvas width for the device frame */
   screenshotX: z.number().optional(),
   /** Top-left Y ratio of canvas height for the device frame */

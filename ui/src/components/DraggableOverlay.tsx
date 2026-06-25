@@ -119,11 +119,12 @@ export function DraggableOverlay({
 export function useOverlayResize(options: {
   canvasWidth: number;
   imageRect: { width: number } | null;
+  maxWidth?: number;
   onResize: (id: string, width: number) => void;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
 }) {
-  const { canvasWidth, imageRect, onResize, onInteractionStart, onInteractionEnd } = options;
+  const { canvasWidth, imageRect, maxWidth = 0.6, onResize, onInteractionStart, onInteractionEnd } = options;
   const [resizingId, setResizingId] = useState<string | null>(null);
   const resizeStartRef = useRef<{ id: string; startX: number; startWidth: number } | null>(null);
 
@@ -145,10 +146,10 @@ export function useOverlayResize(options: {
       if (!start || !imageRect) return;
       const scaleX = imageRect.width / canvasWidth;
       const deltaCanvas = (e.clientX - start.startX) / scaleX;
-      const nextWidth = Math.min(0.6, Math.max(0.03, start.startWidth + deltaCanvas / canvasWidth));
+      const nextWidth = Math.min(maxWidth, Math.max(0.03, start.startWidth + deltaCanvas / canvasWidth));
       onResize(start.id, nextWidth);
     },
-    [canvasWidth, imageRect, onResize],
+    [canvasWidth, imageRect, maxWidth, onResize],
   );
 
   const handleResizePointerUp = useCallback(

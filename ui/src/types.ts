@@ -31,6 +31,10 @@ export interface FrameOptions {
   titleY?: number;
   subtitleX?: number;
   subtitleY?: number;
+  /** Text box width as a fraction of panel width (title) */
+  titleBoxWidth?: number;
+  /** Text box width as a fraction of panel width (subtitle) */
+  subtitleBoxWidth?: number;
   /** Top-left X ratio of canvas width for the device frame */
   screenshotX?: number;
   /** Top-left Y ratio of canvas height for the device frame */
@@ -109,6 +113,8 @@ export type PanelTextStyle = Pick<
   | 'titleY'
   | 'subtitleX'
   | 'subtitleY'
+  | 'titleBoxWidth'
+  | 'subtitleBoxWidth'
   | 'textGridAlign'
   | 'textAlignH'
   | 'textAlignV'
@@ -278,6 +284,7 @@ export const DEFAULT_SETTINGS: FrameSettings = {
     deviceFrame: true,
     frameColor: 'black',
     textPosition: 'bottom',
+    freePosition: true,
     pattern: undefined,
     patternOpacity: 0.1,
   },
